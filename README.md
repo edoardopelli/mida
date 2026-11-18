@@ -567,7 +567,7 @@ L'integrazione Google è opzionale. MIDA usa OAuth 2.0 e permessi di sola lettur
 5. Scegli **Applicazione web**.
 6. In **URI di reindirizzamento autorizzati** aggiungi l'indirizzo di MIDA:
    - `http://localhost:8200/api/google/oauth/callback`
-   - se usi il proxy HTTPS, aggiungi anche `https://maximilianclassroom.com:4443/api/google/oauth/callback`
+   - se usi il proxy HTTPS, aggiungi anche `https://<your-domain.com>:4443/api/google/oauth/callback`
 7. Crea il client e scarica il file **JSON**.
 
 ### 10.3 Importare il JSON in MIDA
