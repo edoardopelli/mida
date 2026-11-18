@@ -1,0 +1,14 @@
+.env
+.DS_Store
+.idea
+.vscode
+*.iml
+.backup/
+proxy/certs/
+
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/
+frontend/coverage/

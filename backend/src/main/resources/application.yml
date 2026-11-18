@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: mida-backend
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/mida}
+  data:
+    mongodb:
+      auto-index-creation: true
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+mida:
+  school-year-start: ${SCHOOL_YEAR_START:2026}
+  time-zone: Europe/Rome
+  imports:
+    enabled: ${IMPORT_MONITORING_ENABLED:true}
+    directory: ${IMPORTS_DIRECTORY:/imports}
+    poll-interval-ms: ${IMPORT_POLL_INTERVAL_MS:5000}
+    initial-delay-ms: ${IMPORT_INITIAL_DELAY_MS:3000}
+    stability-scans: ${IMPORT_STABILITY_SCANS:2}
+    max-file-size-bytes: ${IMPORT_MAX_FILE_SIZE_BYTES:10485760}
+    delete-after-import: ${IMPORT_DELETE_AFTER_IMPORT:true}
+  notifications:
+    enabled: ${NOTIFICATIONS_ENABLED:true}
+    vapid-public-key: ${VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${VAPID_PRIVATE_KEY:}
+    vapid-subject: ${VAPID_SUBJECT:mailto:mida@localhost}
+    reminder-cron: ${REMINDER_CRON:0 * * * * *}
+  events:
+    heartbeat-ms: ${SSE_HEARTBEAT_MS:25000}
+    emitter-timeout-ms: ${SSE_EMITTER_TIMEOUT_MS:1800000}
+  google:
+    enabled: ${GOOGLE_ENABLED:true}
+    gmail-enabled: ${GOOGLE_GMAIL_ENABLED:true}
+    gmail-query: ${GOOGLE_GMAIL_QUERY:from:didup}
+    gmail-max-results: ${GOOGLE_GMAIL_MAX_RESULTS:50}
+    gmail-sync-interval-ms: ${GOOGLE_GMAIL_SYNC_INTERVAL_MS:300000}
+    gmail-initial-delay-ms: ${GOOGLE_GMAIL_INITIAL_DELAY_MS:30000}
+    classroom-enabled: ${GOOGLE_CLASSROOM_ENABLED:true}
+    classroom-announcements: ${GOOGLE_CLASSROOM_ANNOUNCEMENTS:true}
+    max-attachment-size-bytes: ${GOOGLE_MAX_ATTACHMENT_SIZE_BYTES:104857600}
+
+logging:
+  level:
+    root: INFO
+    it.mida: INFO

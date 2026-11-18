@@ -1,0 +1,438 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Monitoraggio · Storico</p>
+      <h1>Importazioni sotto controllo.</h1>
+      <p class="lead">
+        Ogni file DidUP Family viene importato in modo atomico. Qui trovi lo storico, lo stato del
+        monitor e le anomalie che richiedono attenzione.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadAll()" [disabled]="loading()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+        </svg>
+        Aggiorna
+      </button>
+      <a class="btn btn-primary btn-sm" routerLink="/impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.7 2.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-3.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.6 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-3.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.4 7 7.1 4.3l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h3.8v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.6 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v3.8h-.2a1.7 1.7 0 0 0-1.6 1Z" />
+        </svg>
+        Impostazioni
+      </a>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="card error-banner" role="alert">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+      </svg>
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="loadAll()">Riprova</button>
+    </div>
+  }
+
+  @if (status(); as monitor) {
+    <section class="card status-card">
+      <div class="status-main">
+        <div class="monitor-orb" [class]="'monitor-orb is-' + stateTone(monitor.state)">
+          <span aria-hidden="true"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 17V7m4 10V5m4 12v-7m4 7V8m4 9V4" />
+          </svg>
+        </div>
+        <div class="status-copy">
+          <div class="status-title">
+            <h2>Monitoraggio Downloads</h2>
+            <span [class]="'badge badge-' + stateTone(monitor.state) + ' badge-dot'">
+              {{ stateLabel(monitor.state) }}
+            </span>
+          </div>
+          <p>
+            @if (monitor.monitoringEnabled) {
+              MIDA controlla la cartella ogni 5 secondi e importa i file DidUP Family stabili.
+            } @else {
+              Il monitoraggio è disattivato. I file nella cartella Downloads non verranno importati.
+            }
+          </p>
+          <div class="status-meta">
+            <span>
+              <i [class]="monitor.directoryReadable ? 'dot-ok' : 'dot-bad'" aria-hidden="true"></i>
+              {{ monitor.directoryReadable ? 'Cartella leggibile' : 'Cartella non accessibile' }}
+            </span>
+            <span>Ultima scansione: {{ dateTime(monitor.lastScanAt) }}</span>
+            @if (monitor.lastSuccessfulImportAt) {
+              <span>Ultimo import: {{ dateTime(monitor.lastSuccessfulImportAt) }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <dl class="status-facts">
+        <div>
+          <dt>Importazioni</dt>
+          <dd>{{ monitor.totalImports }}</dd>
+        </div>
+        <div>
+          <dt>Compiti</dt>
+          <dd>{{ monitor.totalAssignments }}</dd>
+        </div>
+        <div>
+          <dt>Import diario</dt>
+          <dd>{{ monitor.totalDiaryImports }}</dd>
+        </div>
+        <div>
+          <dt>Attività diario</dt>
+          <dd>{{ monitor.totalDiaryEntries }}</dd>
+        </div>
+        <div>
+          <dt>Anomalie aperte</dt>
+          <dd [class.text-danger]="monitor.openIssues > 0">{{ monitor.openIssues }}</dd>
+        </div>
+        <div>
+          <dt>Dispositivi push</dt>
+          <dd>{{ monitor.activePushSubscriptions }}</dd>
+        </div>
+      </dl>
+
+      @if (monitor.lastError) {
+        <div class="status-error">
+          <strong>Ultimo errore:</strong>
+          {{ monitor.lastError }}
+        </div>
+      }
+    </section>
+  }
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Cronologia import</h2>
+        <p>
+          Un documento per ogni compito: lo stesso compito ritrovato in più file non crea duplicati.
+          @if (imports(); as page) {
+            <span>{{ page.totalElements }} importazioni di compiti.</span>
+          }
+        </p>
+      </div>
+    </div>
+
+    @if (loading() && !imports()) {
+      <div class="skeleton-rows" aria-hidden="true">
+        @for (row of [1, 2, 3, 4]; track row) {
+          <span class="skeleton"></span>
+        }
+      </div>
+    } @else if (imports(); as page) {
+      @if (page.content.length === 0) {
+        <div class="empty-inline">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 2H6a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7l-5-5Z" />
+            <path d="M14 2v5h5M9 13h6m-6 4h4" />
+          </svg>
+          <div>
+            <strong>Nessuna importazione registrata</strong>
+            <p>MIDA è in ascolto sulla cartella Downloads: il primo file DidUP Family comparirà qui.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table imports-table">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Codice</th>
+                <th scope="col">Importato</th>
+                <th scope="col">Nel file</th>
+                <th scope="col">Nuovi</th>
+                <th scope="col">Aggiornati</th>
+                <th scope="col">Invariati</th>
+                <th scope="col">Anno scolastico</th>
+                <th scope="col">SHA-256</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of page.content; track item.id) {
+                <tr>
+                  <td>
+                    <span class="file-cell">
+                      <span class="file-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M14 2H6a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7l-5-5Z" />
+                          <path d="M14 2v5h5" />
+                        </svg>
+                      </span>
+                      <span>
+                        <strong>{{ item.originalFilename }}</strong>
+                        @if (item.filenameSuffix) {
+                          <small>suffisso {{ item.filenameSuffix }}</small>
+                        }
+                      </span>
+                    </span>
+                  </td>
+                  <td class="mono">{{ item.sourceCode }}</td>
+                  <td>{{ dateTime(item.importedAt) }}</td>
+                  <td><span class="badge badge-teal">{{ item.assignmentCount }}</span></td>
+                  <td><span class="badge badge-teal">{{ item.createdCount }}</span></td>
+                  <td><span class="badge badge-amber">{{ item.updatedCount }}</span></td>
+                  <td><span class="badge badge-gray">{{ item.unchangedCount }}</span></td>
+                  <td>{{ item.schoolYearStart }}/{{ item.schoolYearStart + 1 }}</td>
+                  <td class="mono muted">{{ shortSha(item.sha256) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span>Pagina {{ page.page + 1 }} di {{ page.totalPages }}</span>
+          <div class="pagination-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="previousImports()"
+              [disabled]="!canPreviousImport()"
+            >
+              Precedente
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="nextImports()"
+              [disabled]="!canNextImport()"
+            >
+              Successiva
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Diario importato</h2>
+        <p>
+          Una riga per ogni ora: se il docente modifica la stessa ora, MIDA aggiorna l'attività
+          esistente e ne conserva la revisione.
+          @if (diaryImports(); as page) {
+            <span>
+              {{ page.totalElements }}
+              {{ page.totalElements === 1 ? 'importazione di diario' : 'importazioni di diario' }}.
+            </span>
+          }
+        </p>
+      </div>
+      <a class="btn btn-ghost btn-sm" routerLink="/diario">Apri diario</a>
+    </div>
+
+    @if (diaryLoading() && !diaryImports()) {
+      <div class="skeleton-rows" aria-hidden="true">
+        @for (row of [1, 2, 3]; track row) {
+          <span class="skeleton"></span>
+        }
+      </div>
+    } @else if (diaryImports(); as page) {
+      @if (page.content.length === 0) {
+        <div class="empty-inline">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z" />
+            <path d="M8 4v14m3-10h4m-4 3h4" />
+          </svg>
+          <div>
+            <strong>Nessun diario importato</strong>
+            <p>MIDA è in ascolto: i file del diario compariranno qui dopo la condivisione da DidUP Family.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table imports-table">
+            <thead>
+              <tr>
+                <th scope="col">File</th>
+                <th scope="col">Codice</th>
+                <th scope="col">Importato</th>
+                <th scope="col">Nel file</th>
+                <th scope="col">Nuove</th>
+                <th scope="col">Aggiornate</th>
+                <th scope="col">Invariate</th>
+                <th scope="col">Anno scolastico</th>
+                <th scope="col">SHA-256</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of page.content; track item.id) {
+                <tr>
+                  <td>
+                    <span class="file-cell">
+                      <span class="file-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z" />
+                          <path d="M8 4v14m3-10h4m-4 3h4" />
+                        </svg>
+                      </span>
+                      <span>
+                        <strong>{{ item.originalFilename }}</strong>
+                        @if (item.filenameSuffix) {
+                          <small>suffisso {{ item.filenameSuffix }}</small>
+                        }
+                      </span>
+                    </span>
+                  </td>
+                  <td class="mono">{{ item.sourceCode }}</td>
+                  <td>{{ dateTime(item.importedAt) }}</td>
+                  <td><span class="badge badge-teal">{{ item.entryCount }}</span></td>
+                  <td><span class="badge badge-teal">{{ item.createdCount }}</span></td>
+                  <td><span class="badge badge-amber">{{ item.updatedCount }}</span></td>
+                  <td><span class="badge badge-gray">{{ item.unchangedCount }}</span></td>
+                  <td>{{ item.schoolYearStart }}/{{ item.schoolYearStart + 1 }}</td>
+                  <td class="mono muted">{{ shortSha(item.sha256) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span>Pagina {{ page.page + 1 }} di {{ page.totalPages }}</span>
+          <div class="pagination-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="previousDiaryImports()"
+              [disabled]="!canPreviousDiaryImport()"
+            >
+              Precedente
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="nextDiaryImports()"
+              [disabled]="!canNextDiaryImport()"
+            >
+              Successiva
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Anomalie</h2>
+        <p>Problemi di parsing, conflitti, file non eliminabili e cartella non disponibile.</p>
+      </div>
+      <div class="segmented" role="group" aria-label="Filtra anomalie per stato">
+        <button
+          type="button"
+          [class.is-active]="issueFilter() === 'ALL'"
+          (click)="setIssueFilter('ALL')"
+        >
+          Tutte
+        </button>
+        <button
+          type="button"
+          [class.is-active]="issueFilter() === 'OPEN'"
+          (click)="setIssueFilter('OPEN')"
+        >
+          Aperte
+        </button>
+        <button
+          type="button"
+          [class.is-active]="issueFilter() === 'RESOLVED'"
+          (click)="setIssueFilter('RESOLVED')"
+        >
+          Risolte
+        </button>
+      </div>
+    </div>
+
+    @if (issuesLoading() && !issues()) {
+      <div class="skeleton-rows" aria-hidden="true">
+        @for (row of [1, 2, 3]; track row) {
+          <span class="skeleton"></span>
+        }
+      </div>
+    } @else if (issues(); as page) {
+      @if (page.content.length === 0) {
+        <div class="empty-inline is-calm">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m5 12 4 4L19 6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          <div>
+            <strong>
+              {{ issueFilter() === 'ALL' ? 'Nessuna anomalia registrata' : 'Nessuna anomalia in questo stato' }}
+            </strong>
+            <p>Il monitoraggio non ha segnalato problemi per i file elaborati.</p>
+          </div>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table issues-table">
+            <thead>
+              <tr>
+                <th scope="col">Tipo</th>
+                <th scope="col">File</th>
+                <th scope="col">Descrizione</th>
+                <th scope="col">Stato</th>
+                <th scope="col">Tentativi</th>
+                <th scope="col">Ultima volta</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (issue of page.content; track issue.id) {
+                <tr>
+                  <td><span class="badge badge-amber">{{ issueLabel(issue.type) }}</span></td>
+                  <td>
+                    <strong class="file-name">{{ issue.filename || '—' }}</strong>
+                    @if (issue.sourceCode) {
+                      <span class="mono muted block">{{ issue.sourceCode }}</span>
+                    }
+                  </td>
+                  <td class="issue-description">{{ issue.description }}</td>
+                  <td>
+                    @if (issue.status === 'OPEN') {
+                      <span class="badge badge-red badge-dot">Aperta</span>
+                    } @else {
+                      <span class="badge badge-gray badge-dot">Risolta</span>
+                    }
+                  </td>
+                  <td>{{ issue.attempts }}</td>
+                  <td>{{ dateTime(issue.lastSeenAt) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <span>Pagina {{ page.page + 1 }} di {{ page.totalPages }}</span>
+          <div class="pagination-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="previousIssues()"
+              [disabled]="!canPreviousIssue()"
+            >
+              Precedente
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="nextIssues()"
+              [disabled]="!canNextIssue()"
+            >
+              Successiva
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </section>
+</div>

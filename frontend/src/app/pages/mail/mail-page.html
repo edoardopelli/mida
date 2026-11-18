@@ -1,0 +1,589 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Posta · Scuola</p>
+      <h1>Posta e Classroom, in un unico posto.</h1>
+      <p class="lead">
+        Le email vengono scaricate da Gmail tramite API OAuth e salvate in MIDA con i loro
+        allegati. Classroom usa lo stesso account e viene aggiornata quando arriva una nuova
+        email oppure su richiesta.
+      </p>
+    </div>
+    <div class="header-actions">
+      @if (store.gmailStatus()) {
+        <span [class]="mailStatusClass()">{{ mailStatusText() }}</span>
+      }
+      @if (store.classroomStatus()) {
+        <span [class]="classroomStatusClass()">{{ classroomStatusText() }}</span>
+      }
+      @if (store.mailConfigured()) {
+        <button
+          type="button"
+          class="btn btn-secondary btn-sm"
+          (click)="syncMail()"
+          [disabled]="store.mailSyncing()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+          </svg>
+          {{ store.mailSyncing() ? 'Sincronizzazione…' : 'Sincronizza email' }}
+        </button>
+      }
+      <a class="btn btn-secondary btn-sm" routerLink="/impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.7 2.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-3.8v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.6 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3v-3.8h.2a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.4 7.2 7.1 4.5l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6V3h3.8v.2a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1 2.7 2.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v3.8h-.2a1.7 1.7 0 0 0-1.6 1Z" />
+        </svg>
+        Impostazioni
+      </a>
+    </div>
+  </header>
+
+  @if (!store.ready()) {
+    <section class="card google-loading" aria-live="polite">
+      <span class="sr-loading">Caricamento della posta…</span>
+    </section>
+  } @else {
+    <div class="mail-status-grid">
+      <section class="card mail-status-card">
+        <div class="section-heading">
+          <div>
+            <h2>Posta Gmail</h2>
+            <p>
+              @if (store.classroomStatus(); as classroom) {
+                {{ classroom.accountEmail || 'Account non collegato' }}
+              }
+            </p>
+          </div>
+          <span [class]="mailStatusClass()">{{ mailStatusText() }}</span>
+        </div>
+        @if (store.gmailStatus(); as mail) {
+          @if (!mail.configured) {
+            <p class="google-settings-copy">
+              Importa il client OAuth da <a routerLink="/impostazioni">Impostazioni → Account Google</a>.
+              La <a routerLink="/guida-google">guida passo passo</a> spiega come scaricare il JSON
+              da Google Cloud.
+            </p>
+          } @else if (!mail.connected) {
+            <p class="google-settings-copy">
+              Collega l'account Google per scaricare email e allegati con Gmail API.
+            </p>
+            <a class="btn btn-primary btn-sm" href="/api/google/connect">Collega account Google</a>
+          } @else {
+            <dl class="mail-facts">
+              <div><dt>Ricerca Gmail</dt><dd>{{ mail.gmailQuery || 'tutte le email' }}</dd></div>
+              <div><dt>Ultima sincronizzazione</dt><dd>{{ formatDateTime(mail.lastSyncAt) }}</dd></div>
+              <div><dt>Ultimo esito</dt><dd>{{ mail.lastError || mailStatusText() }}</dd></div>
+              <div><dt>Messaggi</dt><dd>{{ mail.lastFetchedCount }} · {{ mail.lastNewCount }} nuove</dd></div>
+              <div><dt>Allegati</dt><dd>{{ mail.lastAttachmentCount }} · {{ mail.lastNewAttachmentCount }} nuovi</dd></div>
+            </dl>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="syncMail()"
+              [disabled]="store.mailSyncing()"
+            >
+              {{ store.mailSyncing() ? 'Sincronizzazione…' : 'Sincronizza email' }}
+            </button>
+          }
+        }
+      </section>
+
+      <section class="card mail-status-card">
+        <div class="section-heading">
+          <div>
+            <h2>Google Classroom</h2>
+            <p>
+              @if (store.classroomStatus(); as classroom) {
+                {{ classroom.accountEmail || 'Account non collegato' }}
+              }
+            </p>
+          </div>
+          <span [class]="classroomStatusClass()">{{ classroomStatusText() }}</span>
+        </div>
+        @if (store.classroomStatus(); as classroom) {
+          @if (!classroom.configured) {
+            <p class="google-settings-copy">
+              Importa il client OAuth da <a routerLink="/impostazioni">Impostazioni → Account Google</a>.
+              La <a routerLink="/guida-google">guida passo passo</a> spiega come scaricare il JSON
+              da Google Cloud.
+            </p>
+          } @else if (!classroom.connected) {
+            <p class="google-settings-copy">
+              Collega l'account Google per leggere compiti, materiali e annunci di Classroom.
+            </p>
+            <a class="btn btn-primary btn-sm" href="/api/google/connect">Collega Classroom</a>
+          } @else {
+            <dl class="mail-facts">
+              <div><dt>Ultima sincronizzazione</dt><dd>{{ formatDateTime(classroom.lastSyncAt) }}</dd></div>
+              <div><dt>Ultimo esito</dt><dd>{{ classroom.lastError || classroomStatusText() }}</dd></div>
+              <div>
+                <dt>Elementi Classroom</dt>
+                <dd>{{ classroom.lastClassroomItemCount }} · {{ classroom.lastNewClassroomItemCount }} nuovi</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              (click)="syncClassroom()"
+              [disabled]="store.classroomSyncing()"
+            >
+              {{ store.classroomSyncing() ? 'Sincronizzazione…' : 'Sincronizza Classroom' }}
+            </button>
+          }
+        }
+      </section>
+    </div>
+
+    <div class="google-tabs" role="tablist" aria-label="Posta e Classroom">
+      <button
+        type="button"
+        role="tab"
+        [class.is-active]="store.tab() === 'email'"
+        [attr.aria-selected]="store.tab() === 'email'"
+        (click)="store.setTab('email')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 5h16v14H4V5Zm0 1 8 6 8-6" />
+        </svg>
+        Email
+        <span class="google-tab-count">{{ store.emailTotal() }}</span>
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [class.is-active]="store.tab() === 'classroom'"
+        [attr.aria-selected]="store.tab() === 'classroom'"
+        (click)="store.setTab('classroom')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m3 9 9-5 9 5-9 5-9-5Zm0 0v7m4-4.5V17c2.5 1.7 7.5 1.7 10 0v-5.5" />
+        </svg>
+        Classroom
+        <span class="google-tab-count">{{ store.classroomTotal() }}</span>
+      </button>
+    </div>
+
+    @if (store.error(); as error) {
+      <div class="card error-banner" role="alert">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+        </svg>
+        <p>{{ error }}</p>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="retry()">Riprova</button>
+      </div>
+    }
+
+    @if (store.tab() === 'email') {
+      @if (!store.mailConfigured()) {
+        <section class="card google-connect">
+          <div class="google-connect-mark" aria-hidden="true">G</div>
+          <div class="google-connect-copy">
+            <h2>Collega Gmail</h2>
+            <p>
+              MIDA legge le email con Gmail API in sola lettura, salva corpo e allegati e importa
+              automaticamente i TXT DidUP. Non serve una password Google.
+            </p>
+            <ul class="google-permissions">
+              <li>Gmail: lettura di messaggi e allegati</li>
+              <li>Classroom: compiti, materiali e annunci</li>
+              <li>Drive: download dei file dei materiali Classroom</li>
+            </ul>
+            @if (store.classroomConfigured()) {
+              <a class="btn btn-primary" href="/api/google/connect">Collega account Google</a>
+            } @else {
+              <p class="google-settings-copy">
+                Importa il client OAuth da
+                <a routerLink="/impostazioni">Impostazioni → Account Google</a> per collegare Gmail.
+              </p>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="card google-filter" aria-label="Filtri email">
+          <label class="field">
+            <span>Cerca</span>
+            <span class="input-with-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+              </svg>
+              <input
+                type="search"
+                placeholder="Oggetto, mittente, corpo…"
+                [value]="store.emailFilters().q"
+                (input)="onEmailSearch($event)"
+              />
+            </span>
+          </label>
+          <label class="field">
+            <span>Mittente</span>
+            <input
+              type="search"
+              placeholder="es. didup"
+              [value]="store.emailFilters().from"
+              (change)="onEmailFrom($event)"
+            />
+          </label>
+          @if (store.emailFiltersActive()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="store.resetEmailFilters()">
+              Azzera filtri
+            </button>
+          }
+          <span class="google-filter-summary">
+            <strong>{{ store.emailTotal() }}</strong> {{ emailCountLabel(store.emailTotal()) }}
+          </span>
+        </section>
+
+        @if (store.loading()) {
+          <div class="card google-loading" aria-live="polite">
+            <span class="sr-loading">Caricamento email…</span>
+          </div>
+        } @else if (store.emails().length === 0) {
+          <section class="card empty-state">
+            <span class="empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 5h16v14H4V5Zm0 1 8 6 8-6" />
+              </svg>
+            </span>
+            <h2>Nessuna email trovata</h2>
+            <p>
+              @if (store.emailFiltersActive()) {
+                Prova a modificare i filtri di ricerca.
+              } @else {
+                MIDA non ha ancora sincronizzato email. Avvia una sincronizzazione o controlla la
+                configurazione Gmail nelle impostazioni.
+              }
+            </p>
+          </section>
+        } @else {
+          <section class="card google-list" aria-label="Email sincronizzate">
+            @for (email of store.emails(); track email.id) {
+              <button type="button" class="email-row" (click)="store.openEmail(email.id)">
+                <span class="email-dot" aria-hidden="true"></span>
+                <span class="email-main">
+                  <span class="email-subject">{{ email.subject || '(senza oggetto)' }}</span>
+                  <span class="email-from">{{ email.from || 'Mittente sconosciuto' }}</span>
+                  <span class="email-snippet">{{ email.snippet || 'Nessuna anteprima disponibile.' }}</span>
+                </span>
+                <span class="email-meta">
+                  <span>{{ formatDateTime(email.receivedAt) }}</span>
+                  @if (email.hasAttachments) {
+                    <span class="badge badge-teal">{{ email.attachmentCount }} allegati</span>
+                  }
+                </span>
+              </button>
+            }
+          </section>
+
+          @if (store.emailTotalPages() > 1) {
+            <nav class="pagination" aria-label="Paginazione email">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                [disabled]="store.emailPage() === 0"
+                (click)="store.loadEmails(store.emailPage() - 1)"
+              >
+                Precedente
+              </button>
+              <span>Pagina {{ store.emailPage() + 1 }} di {{ store.emailTotalPages() }}</span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                [disabled]="store.emailPage() + 1 >= store.emailTotalPages()"
+                (click)="store.loadEmails(store.emailPage() + 1)"
+              >
+                Successiva
+              </button>
+            </nav>
+          }
+        }
+      }
+    } @else {
+      @if (!store.classroomConnected()) {
+        <section class="card google-connect">
+          <div class="google-connect-mark" aria-hidden="true">G</div>
+          <div class="google-connect-copy">
+            <h2>Collega Google Classroom</h2>
+            <p>
+              MIDA accede in sola lettura a corsi, compiti, materiali e annunci. La
+              sincronizzazione Classroom parte quando arriva una nuova email o quando premi
+              <strong>Sincronizza Classroom</strong>.
+            </p>
+            <ul class="google-permissions">
+              <li>Classroom: corsi, compiti, materiali e annunci</li>
+              <li>Drive: download dei file allegati ai materiali</li>
+              <li>Gmail: lettura di messaggi e allegati</li>
+            </ul>
+            @if (store.classroomStatus()?.lastError; as error) {
+              <p class="google-error">{{ error }}</p>
+            }
+            @if (store.classroomConfigured()) {
+              <a class="btn btn-primary" href="/api/google/connect">Collega Classroom</a>
+            } @else {
+              <p class="google-settings-copy">
+                Importa il client OAuth da
+                <a routerLink="/impostazioni">Impostazioni → Account Google</a> per collegare
+                Classroom.
+              </p>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="card google-filter" aria-label="Filtri Classroom">
+          <label class="field">
+            <span>Cerca</span>
+            <span class="input-with-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+              </svg>
+              <input
+                type="search"
+                placeholder="Titolo, descrizione, corso…"
+                [value]="store.classroomFilters().q"
+                (input)="onClassroomSearch($event)"
+              />
+            </span>
+          </label>
+          <label class="field">
+            <span>Corso</span>
+            <select [value]="store.classroomFilters().courseId" (change)="onCourse($event)">
+              <option value="">Tutti i corsi</option>
+              @for (course of store.classroomCourses(); track course.courseId) {
+                <option [value]="course.courseId">
+                  {{ course.courseName }}{{ course.courseSection ? ' · ' + course.courseSection : '' }}
+                </option>
+              }
+            </select>
+          </label>
+          <label class="field">
+            <span>Tipo</span>
+            <select [value]="store.classroomFilters().type" (change)="onType($event)">
+              <option value="">Tutti</option>
+              <option value="COURSEWORK">Compiti</option>
+              <option value="MATERIAL">Materiali</option>
+              <option value="ANNOUNCEMENT">Annunci</option>
+            </select>
+          </label>
+          @if (store.classroomFiltersActive()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="store.resetClassroomFilters()">
+              Azzera filtri
+            </button>
+          }
+          <span class="google-filter-summary">
+            <strong>{{ store.classroomTotal() }}</strong>
+            {{ classroomCountLabel(store.classroomTotal()) }}
+          </span>
+        </section>
+
+        @if (store.loading()) {
+          <div class="card google-loading" aria-live="polite">
+            <span class="sr-loading">Caricamento Classroom…</span>
+          </div>
+        } @else if (store.classroomItems().length === 0) {
+          <section class="card empty-state">
+            <span class="empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m3 9 9-5 9 5-9 5-9-5Zm0 0v7m4-4.5V17c2.5 1.7 7.5 1.7 10 0v-5.5" />
+              </svg>
+            </span>
+            <h2>Nessun elemento Classroom</h2>
+            <p>
+              @if (store.classroomFiltersActive()) {
+                Prova a modificare i filtri di ricerca.
+              } @else {
+                Non ci sono ancora compiti o materiali sincronizzati. Avvia una sincronizzazione.
+              }
+            </p>
+          </section>
+        } @else {
+          <section class="card google-list" aria-label="Elementi Classroom">
+            @for (item of store.classroomItems(); track item.id) {
+              <button type="button" class="classroom-row" (click)="store.openClassroomItem(item.id)">
+                <span class="classroom-main">
+                  <span class="classroom-badges">
+                    <span [class]="typeClass(item.itemType)">{{ typeLabel(item.itemType) }}</span>
+                    <span class="badge badge-gray">{{ item.courseName }}</span>
+                  </span>
+                  <span class="classroom-title">{{ item.title }}</span>
+                  @if (item.description) {
+                    <span class="classroom-description">{{ item.description }}</span>
+                  }
+                  @if (item.dueDate) {
+                    <span class="classroom-due">
+                      Consegna {{ formatDate(item.dueDate) }}{{ item.dueTime ? ' · ' + item.dueTime : '' }}
+                    </span>
+                  }
+                </span>
+                <span class="classroom-meta">
+                  <span>{{ materialCountLabel(item.materialCount) }}</span>
+                  @if (item.alternateLink) {
+                    <span class="muted">Apri in Classroom</span>
+                  }
+                </span>
+              </button>
+            }
+          </section>
+
+          @if (store.classroomTotalPages() > 1) {
+            <nav class="pagination" aria-label="Paginazione Classroom">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                [disabled]="store.classroomPage() === 0"
+                (click)="store.loadClassroom(store.classroomPage() - 1)"
+              >
+                Precedente
+              </button>
+              <span>
+                Pagina {{ store.classroomPage() + 1 }} di {{ store.classroomTotalPages() }}
+              </span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                [disabled]="store.classroomPage() + 1 >= store.classroomTotalPages()"
+                (click)="store.loadClassroom(store.classroomPage() + 1)"
+              >
+                Successiva
+              </button>
+            </nav>
+          }
+        }
+      }
+    }
+  }
+</div>
+
+@if (store.selectedEmail(); as email) {
+  <div class="detail-backdrop" (click)="store.closeEmail()"></div>
+  <aside class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="email-title">
+    <header class="detail-header">
+      <div>
+        <span class="badge badge-teal">Email</span>
+        <h2 id="email-title">{{ email.subject || '(senza oggetto)' }}</h2>
+      </div>
+      <button type="button" class="icon-button" (click)="store.closeEmail()" aria-label="Chiudi email">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+      </button>
+    </header>
+    <div class="detail-body">
+      <dl class="email-headers">
+        <div><dt>Da</dt><dd>{{ email.from || '—' }}</dd></div>
+        <div><dt>A</dt><dd>{{ email.to || '—' }}</dd></div>
+        @if (email.cc) {
+          <div><dt>Cc</dt><dd>{{ email.cc }}</dd></div>
+        }
+        <div><dt>Ricevuta</dt><dd>{{ formatDateTime(email.receivedAt) }}</dd></div>
+      </dl>
+
+      <section class="email-body">
+        <h3>Messaggio</h3>
+        <pre>{{ email.bodyText || 'Nessun testo disponibile.' }}</pre>
+      </section>
+
+      <section class="email-attachments">
+        <h3>Allegati <span class="muted">({{ email.attachments.length }})</span></h3>
+        @for (attachment of email.attachments; track attachment.id) {
+          <div class="attachment-row">
+            <div class="attachment-copy">
+              <strong>{{ attachment.filename }}</strong>
+              <span class="muted">
+                {{ formatSize(attachment.size) }}
+                @if (attachment.importMessage) {
+                  · {{ attachment.importMessage }}
+                }
+              </span>
+            </div>
+            <div class="attachment-actions">
+              <span [class]="attachmentStatusClass(attachment.importStatus)">
+                {{ attachmentStatusLabel(attachment.importStatus) }}
+              </span>
+              @if (attachment.downloadUrl) {
+                <a class="btn btn-secondary btn-sm" [href]="attachment.downloadUrl" download>
+                  Scarica
+                </a>
+              }
+            </div>
+          </div>
+        } @empty {
+          <p class="muted">Questa email non contiene allegati.</p>
+        }
+      </section>
+    </div>
+  </aside>
+}
+
+@if (store.selectedClassroomItem(); as item) {
+  <div class="detail-backdrop" (click)="store.closeClassroomItem()"></div>
+  <aside class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="classroom-title">
+    <header class="detail-header">
+      <div>
+        <span [class]="typeClass(item.itemType)">{{ typeLabel(item.itemType) }}</span>
+        <h2 id="classroom-title">{{ item.title }}</h2>
+      </div>
+      <button
+        type="button"
+        class="icon-button"
+        (click)="store.closeClassroomItem()"
+        aria-label="Chiudi elemento Classroom"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+      </button>
+    </header>
+    <div class="detail-body">
+      <p class="detail-teacher">
+        {{ item.courseName }}{{ item.courseSection ? ' · ' + item.courseSection : '' }}
+      </p>
+      @if (item.dueDate) {
+        <p class="classroom-due">
+          Consegna {{ formatDate(item.dueDate) }}{{ item.dueTime ? ' · ' + item.dueTime : '' }}
+        </p>
+      }
+      @if (item.description) {
+        <section class="email-body">
+          <h3>Descrizione</h3>
+          <pre>{{ item.description }}</pre>
+        </section>
+      }
+      <section class="email-attachments">
+        <h3>Materiali <span class="muted">({{ item.materials.length }})</span></h3>
+        @for (material of item.materials; track material.id) {
+          <div class="attachment-row">
+            <div class="attachment-copy">
+              <strong>{{ material.title || material.filename || 'Materiale' }}</strong>
+              <span class="muted">
+                {{ materialTypeLabel(material.type) }}
+                @if (material.size) {
+                  · {{ formatSize(material.size) }}
+                }
+                @if (material.error) {
+                  · {{ material.error }}
+                }
+              </span>
+            </div>
+            <div class="attachment-actions">
+              <span [class]="materialStatusClass(material.status)">
+                {{ materialStatusLabel(material.status) }}
+              </span>
+              @if (material.downloadUrl) {
+                <a class="btn btn-secondary btn-sm" [href]="material.downloadUrl" download>
+                  Scarica
+                </a>
+              } @else if (material.url) {
+                <a class="btn btn-secondary btn-sm" [href]="material.url" target="_blank" rel="noopener">
+                  Apri
+                </a>
+              }
+            </div>
+          </div>
+        } @empty {
+          <p class="muted">Nessun materiale allegato.</p>
+        }
+      </section>
+      @if (item.alternateLink) {
+        <a class="btn btn-primary detail-classroom-link" [href]="item.alternateLink" target="_blank" rel="noopener">
+          Apri in Google Classroom
+        </a>
+      }
+    </div>
+  </aside>
+}

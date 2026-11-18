@@ -1,0 +1,331 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Panoramica</p>
+      <h1>La giornata, a colpo d'occhio.</h1>
+      <p class="lead">
+        Scadenze vicine, compiti completati e stato del monitoraggio Downloads in un'unica vista.
+      </p>
+    </div>
+    <div class="header-actions">
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        (click)="load()"
+        [disabled]="loading()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+        </svg>
+        Aggiorna
+      </button>
+      <a class="btn btn-primary btn-sm" routerLink="/calendario">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+        </svg>
+        Apri calendario
+      </a>
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="card error-banner" role="alert">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+      </svg>
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="load()">Riprova</button>
+    </div>
+  }
+
+  @if (loading() && !stats()) {
+    <section class="stat-grid" aria-hidden="true">
+      @for (item of [1, 2, 3, 4]; track item) {
+        <div class="card stat-card">
+          <span class="skeleton skeleton-icon"></span>
+          <span class="skeleton skeleton-line"></span>
+          <span class="skeleton skeleton-number"></span>
+        </div>
+      }
+    </section>
+    <div class="card skeleton-panel skeleton"></div>
+  } @else if (emptyDatabase()) {
+    <section class="empty-layout">
+      <div class="card empty-state">
+        <span class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+            <path d="m9 14 2 2 4-5" />
+          </svg>
+        </span>
+        <h2>Nessun compito presente</h2>
+        <p>I compiti condivisi da DidUP Family compariranno automaticamente qui.</p>
+        <a class="btn btn-secondary btn-sm empty-action" routerLink="/importazioni">
+          Verifica il monitoraggio
+        </a>
+      </div>
+
+      <aside class="card card-pad how-card">
+        <div class="section-heading">
+          <div>
+            <h2>Come funziona MIDA</h2>
+            <p>Tre passaggi, tutti automatici.</p>
+          </div>
+        </div>
+        <ol class="steps">
+          <li>
+            <span>1</span>
+            <div>
+              <strong>DidUP Family salva il file</strong>
+              <p>I promemoria vengono scaricati come file <code>.txt</code> nella cartella Downloads.</p>
+            </div>
+          </li>
+          <li>
+            <span>2</span>
+            <div>
+              <strong>MIDA legge e importa</strong>
+              <p>Il monitor controlla la cartella ogni 5 secondi, salva i compiti ed elimina il file solo dopo un import confermato.</p>
+            </div>
+          </li>
+          <li>
+            <span>3</span>
+            <div>
+              <strong>Tutto compare qui</strong>
+              <p>Calendario, dashboard e notifiche push si aggiornano in tempo reale.</p>
+            </div>
+          </li>
+        </ol>
+        @if (monitor(); as status) {
+          <div class="monitor-mini">
+            <span [class]="'badge badge-' + stateTone(status.state) + ' badge-dot'">
+              Monitor {{ stateLabel(status.state) }}
+            </span>
+            <span class="tiny muted">Ultima scansione {{ time(status.lastScanAt) }}</span>
+          </div>
+        }
+      </aside>
+    </section>
+  } @else if (stats(); as data) {
+    <section class="stat-grid" aria-label="Riepilogo compiti">
+      <article class="card stat-card stat-open">
+        <span class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 5h6m-7 3h8M7 3h10a1 1 0 0 1 1 1v16l-4-2-2 2-2-2-4 2V4a1 1 0 0 1 1-1Z" />
+          </svg>
+        </span>
+        <div>
+          <span class="stat-label">Da fare</span>
+          <strong class="stat-number">{{ data.open }}</strong>
+          <span class="stat-note">compiti ancora aperti</span>
+        </div>
+      </article>
+
+      <article class="card stat-card stat-today">
+        <span class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </span>
+        <div>
+          <span class="stat-label">Scadono oggi</span>
+          <strong class="stat-number">{{ data.today }}</strong>
+          <span class="stat-note">
+            {{ data.tomorrow }} domani · {{ data.nextSevenDays }} nei prossimi 7 giorni
+          </span>
+        </div>
+      </article>
+
+      <article class="card stat-card" [class.stat-overdue]="data.overdue > 0">
+        <span class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 8v5m0 3.5v.5M10.3 3.8 2.2 18a2 2 0 0 0 1.8 3h16a2 2 0 0 0 1.8-3L13.7 3.8a2 2 0 0 0-3.4 0Z" />
+          </svg>
+        </span>
+        <div>
+          <span class="stat-label">Scaduti</span>
+          <strong class="stat-number">{{ data.overdue }}</strong>
+          <span class="stat-note">da recuperare</span>
+        </div>
+      </article>
+
+      <article class="card stat-card stat-done">
+        <span class="stat-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="m5 12 4 4L19 6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </span>
+        <div>
+          <span class="stat-label">Completati</span>
+          <strong class="stat-number">{{ data.completed }}</strong>
+          <span class="stat-note">su {{ data.total }} compiti totali</span>
+        </div>
+      </article>
+    </section>
+
+    @if (data.overdue > 0) {
+      <div class="overdue-banner" role="status">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8v5m0 3.5v.5M10.3 3.8 2.2 18a2 2 0 0 0 1.8 3h16a2 2 0 0 0 1.8-3L13.7 3.8a2 2 0 0 0-3.4 0Z" />
+        </svg>
+        <p>
+          <strong>{{ data.overdue }}</strong>
+          {{ data.overdue === 1 ? 'compito è scaduto' : 'compiti sono scaduti' }} e non risulta ancora completato.
+        </p>
+        <a class="btn btn-secondary btn-sm" routerLink="/calendario">Controlla le scadenze</a>
+      </div>
+    }
+
+    <div class="dashboard-grid">
+      <section class="card card-pad upcoming-card">
+        <div class="section-heading">
+          <div>
+            <h2>Prossime consegne</h2>
+            <p>Compiti aperti nei prossimi 14 giorni.</p>
+          </div>
+          <a class="btn btn-ghost btn-sm" routerLink="/calendario">Vedi tutto</a>
+        </div>
+
+        @if (data.upcoming.length === 0) {
+          <div class="mini-empty">
+            <span aria-hidden="true">✓</span>
+            <p>Nessuna consegna in vista. Buon lavoro!</p>
+          </div>
+        } @else {
+          <ul class="upcoming-list">
+            @for (item of data.upcoming; track item.id) {
+              <li>
+                <a class="upcoming-item" routerLink="/calendario">
+                  <span
+                    class="subject-bar"
+                    [style.background]="palette(item.subject).strong"
+                    aria-hidden="true"
+                  ></span>
+                  <span
+                    class="subject-chip"
+                    [style.background]="palette(item.subject).background"
+                    [style.color]="palette(item.subject).text"
+                  >
+                    {{ item.subject }}
+                  </span>
+                  <span class="upcoming-copy">
+                    <strong>{{ shortDescription(item.description) }}</strong>
+                    <small>{{ item.teacher }} · {{ dueText(item.dueDate) }}</small>
+                  </span>
+                  <span class="upcoming-date">
+                    <strong>{{ date(item.dueDate) }}</strong>
+                    <small>consegna</small>
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <div class="side-stack">
+        @if (monitor(); as status) {
+          <section class="card card-pad monitor-card">
+            <div class="section-heading">
+              <div>
+                <h2>Monitoraggio</h2>
+                <p>Cartella Downloads di DidUP Family.</p>
+              </div>
+              <span [class]="'badge badge-' + stateTone(status.state) + ' badge-dot'">
+                {{ stateLabel(status.state) }}
+              </span>
+            </div>
+            <dl class="monitor-grid">
+              <div>
+                <dt>Importazioni</dt>
+                <dd>{{ status.totalImports }}</dd>
+              </div>
+              <div>
+                <dt>Compiti</dt>
+                <dd>{{ status.totalAssignments }}</dd>
+              </div>
+              <div>
+                <dt>Import diario</dt>
+                <dd>{{ status.totalDiaryImports }}</dd>
+              </div>
+              <div>
+                <dt>Attività diario</dt>
+                <dd>{{ status.totalDiaryEntries }}</dd>
+              </div>
+              <div>
+                <dt>Anomalie aperte</dt>
+                <dd [class.text-danger]="status.openIssues > 0">{{ status.openIssues }}</dd>
+              </div>
+              <div>
+                <dt>Dispositivi push</dt>
+                <dd>{{ status.activePushSubscriptions }}</dd>
+              </div>
+            </dl>
+            <p class="monitor-foot">
+              Ultima scansione: {{ dateTime(status.lastScanAt) }}
+              @if (status.lastSuccessfulImportAt) {
+                <span>· Ultimo import: {{ dateTime(status.lastSuccessfulImportAt) }}</span>
+              }
+            </p>
+            @if (status.lastError) {
+              <p class="monitor-error">{{ status.lastError }}</p>
+            }
+          </section>
+        }
+
+        <section class="card card-pad">
+          <div class="section-heading">
+            <div>
+              <h2>Import recenti</h2>
+              <p>Ultimi file elaborati.</p>
+            </div>
+            <a class="btn btn-ghost btn-sm" routerLink="/importazioni">Storico</a>
+          </div>
+          @if (data.recentImports.length === 0) {
+            <p class="tiny muted">Nessuna importazione registrata.</p>
+          } @else {
+            <ul class="import-list">
+              @for (item of data.recentImports; track item.id) {
+                <li>
+                  <span class="import-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M14 2H6a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7l-5-5Z" />
+                      <path d="M14 2v5h5M9 13h6m-6 4h4" />
+                    </svg>
+                  </span>
+                  <span class="import-copy">
+                    <strong>{{ item.originalFilename }}</strong>
+                    <small>{{ dateTime(item.importedAt) }} · {{ item.assignmentCount }} compiti</small>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+    </div>
+
+    @if (data.openIssues.length > 0) {
+      <section class="card card-pad issues-card">
+        <div class="section-heading">
+          <div>
+            <h2>Anomalie da controllare</h2>
+            <p>File che MIDA non ha potuto importare o eliminare.</p>
+          </div>
+          <a class="btn btn-ghost btn-sm" routerLink="/importazioni">Apri storico</a>
+        </div>
+        <ul class="issue-list">
+          @for (issue of data.openIssues; track issue.id) {
+            <li>
+              <span class="badge badge-amber">{{ issueLabel(issue.type) }}</span>
+              <span class="issue-copy">
+                <strong>{{ issue.filename || 'Cartella di importazione' }}</strong>
+                <small>{{ issue.description }}</small>
+              </span>
+              <span class="tiny muted">{{ dateTime(issue.lastSeenAt) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</div>

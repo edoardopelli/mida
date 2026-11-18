@@ -1,0 +1,251 @@
+<div class="page diary-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">DidUP Family · Diario</p>
+      <h1>La scuola, giorno per giorno.</h1>
+      <p class="lead">
+        Le attività svolte in classe, ora per ora. MIDA importa automaticamente i diari condivisi
+        da DidUP Family e li tiene ordinati accanto ai compiti.
+      </p>
+    </div>
+    <div class="header-actions">
+      @if (store.lastLoadedAt(); as loadedAt) {
+        <span class="sync-copy">
+          Aggiornato alle
+          {{ loadedAt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) }}
+        </span>
+      }
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        (click)="store.reloadAll()"
+        [disabled]="store.loading()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+        </svg>
+        Aggiorna
+      </button>
+      <a class="btn btn-primary btn-sm" routerLink="/calendario">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+        </svg>
+        Calendario
+      </a>
+    </div>
+  </header>
+
+  @if (store.error(); as error) {
+    <div class="card error-banner" role="alert">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+      </svg>
+      <p>{{ error }}</p>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="store.reloadAll()">Riprova</button>
+    </div>
+  }
+
+  @if (!store.ready()) {
+    <section class="diary-loading" aria-hidden="true">
+      <div class="card skeleton diary-toolbar-skeleton"></div>
+      <div class="diary-grid">
+        <div class="card skeleton diary-panel-skeleton"></div>
+        <div class="card skeleton diary-side-skeleton"></div>
+      </div>
+    </section>
+  } @else if (!store.hasEntries()) {
+    <section class="card empty-state" aria-live="polite">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z" />
+          <path d="M8 4v14m3-10h4m-4 3h4m-4 3h2" />
+        </svg>
+      </span>
+      <h2>Nessuna attività nel diario</h2>
+      <p>Le attività condivise da DidUP Family compariranno automaticamente qui.</p>
+      <a class="btn btn-secondary btn-sm empty-link" routerLink="/importazioni">
+        Controlla il monitoraggio
+      </a>
+    </section>
+  } @else {
+    <section class="card diary-toolbar" aria-label="Navigazione e filtri del diario">
+      <div class="date-navigation">
+        <button
+          type="button"
+          class="icon-button date-arrow"
+          (click)="store.goOlder()"
+          [disabled]="!store.hasOlder()"
+          aria-label="Giorno precedente"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <div class="selected-date">
+          <span>Attività svolta il</span>
+          <strong>{{ selectedLabel() }}</strong>
+          <small>{{ store.entries().length }} attività</small>
+        </div>
+        <button
+          type="button"
+          class="icon-button date-arrow"
+          (click)="store.goNewer()"
+          [disabled]="!store.hasNewer()"
+          aria-label="Giorno successivo"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="store.goToday()" [disabled]="store.isToday()">
+          Oggi
+        </button>
+        <label class="field date-picker">
+          <span>Vai al giorno</span>
+          <input type="date" [value]="store.selectedDate() ?? today" (change)="onDate($event)" />
+        </label>
+      </div>
+
+      <div class="diary-filters">
+        <label class="field filter-search">
+          <span>Cerca</span>
+          <span class="input-with-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Attività, materia, professore…"
+              [value]="store.filters().q"
+              (input)="onSearch($event)"
+            />
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Materia</span>
+          <select [value]="store.filters().subject" (change)="onSubject($event)">
+            <option value="">Tutte le materie</option>
+            @for (subject of store.subjects(); track subject) {
+              <option [value]="subject">{{ subject }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Professore</span>
+          <select [value]="store.filters().teacher" (change)="onTeacher($event)">
+            <option value="">Tutti i professori</option>
+            @for (teacher of store.teachers(); track teacher) {
+              <option [value]="teacher">{{ teacher }}</option>
+            }
+          </select>
+        </label>
+
+        @if (store.filtersActive()) {
+          <button type="button" class="btn btn-ghost btn-sm filters-reset" (click)="store.resetFilters()">
+            Azzera filtri
+          </button>
+        }
+      </div>
+    </section>
+
+    <div class="diary-grid">
+      <section class="card diary-day" [class.is-loading]="store.loading()">
+        <header class="day-heading">
+          <div>
+            <p class="eyebrow">Registro del giorno</p>
+            <h2>{{ selectedLabel() }}</h2>
+          </div>
+          <span class="badge badge-teal">{{ store.entries().length }} attività</span>
+        </header>
+
+        @if (store.loading() && store.entries().length === 0) {
+          <div class="skeleton-rows" aria-hidden="true">
+            @for (row of [1, 2, 3, 4]; track row) {
+              <span class="skeleton"></span>
+            }
+          </div>
+        } @else if (store.entries().length === 0) {
+          <div class="day-empty">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4Z" />
+              <path d="M8 4v14m3-10h4m-4 3h4" />
+            </svg>
+            <div>
+              <strong>
+                {{ store.filtersActive() ? 'Nessuna attività corrisponde ai filtri' : 'Nessuna attività per questo giorno' }}
+              </strong>
+              <p>
+                @if (store.filtersActive()) {
+                  Prova ad azzerare i filtri per vedere tutte le attività del giorno.
+                } @else {
+                  Scegli un altro giorno dal calendario o dall'elenco dei giorni disponibili.
+                }
+              </p>
+            </div>
+            @if (store.filtersActive()) {
+              <button type="button" class="btn btn-secondary btn-sm" (click)="store.resetFilters()">Mostra tutto</button>
+            }
+          </div>
+        } @else {
+          <ol class="diary-timeline">
+            @for (entry of store.entries(); track entry.id) {
+              <li class="diary-entry">
+                <div class="period-column">
+                  <span class="period-badge">{{ entry.periodLabel }}</span>
+                </div>
+                <article class="entry-card">
+                  <header>
+                    <span
+                      class="subject-chip"
+                      [style.background]="palette(entry).background"
+                      [style.border-color]="palette(entry).border"
+                      [style.color]="palette(entry).text"
+                    >
+                      {{ entry.subject }}
+                    </span>
+                    <span class="teacher-name">{{ entry.teacher }}</span>
+                  </header>
+                  <p class="entry-description" [class.is-empty]="!entry.description">
+                    {{ entry.description || 'Nessuna attività descritta per quest’ora.' }}
+                  </p>
+                  <footer>
+                    <span>{{ entry.activityDateRaw }}</span>
+                    @if (entry.revision > 1) {
+                      <span class="badge badge-amber">Revisione {{ entry.revision }}</span>
+                    }
+                    <span class="mono muted">{{ entry.sourceCode }}</span>
+                  </footer>
+                </article>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+
+      <aside class="card dates-sidebar">
+        <div class="section-heading">
+          <div>
+            <h2>Giorni disponibili</h2>
+            <p>
+              {{ store.dates().length }}
+              {{ store.dates().length === 1 ? 'giornata nel diario' : 'giornate nel diario' }}.
+            </p>
+          </div>
+        </div>
+        <ul class="date-list">
+          @for (day of store.dates(); track day.date) {
+            <li>
+              <button
+                type="button"
+                [class.is-active]="day.date === store.selectedDate()"
+                [class.is-today]="day.date === today"
+                (click)="store.selectDate(day.date)"
+              >
+                <span class="date-main">{{ dateChipLabel(day.date) }}</span>
+                <span class="date-count">{{ day.entryCount }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </aside>
+    </div>
+  }
+</div>

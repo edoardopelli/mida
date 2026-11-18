@@ -1,0 +1,587 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">MIDA · Impostazioni</p>
+      <h1>Notifiche, posta e Classroom.</h1>
+      <p class="lead">
+        Configura le notifiche push, la posta Gmail e l'accesso a Google Classroom. Le
+        preferenze di notifica valgono per tutti i dispositivi collegati.
+      </p>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary btn-sm" routerLink="/importazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" />
+        </svg>
+        Importazioni
+      </a>
+    </div>
+  </header>
+
+  @if (loadError(); as message) {
+    <div class="card error-banner" role="alert">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+      </svg>
+      <p>{{ message }}</p>
+      <button type="button" class="btn btn-secondary btn-sm" (click)="initialize()">Riprova</button>
+    </div>
+  }
+
+  <div class="settings-grid">
+    <section class="card card-pad preferences-card">
+      <div class="section-heading">
+        <div>
+          <h2>Preferenze di notifica</h2>
+          <p>Le modifiche hanno effetto dal salvataggio successivo.</p>
+        </div>
+        @if (savedNow()) {
+          <span class="badge badge-teal badge-dot">Salvate</span>
+        } @else if (dirty()) {
+          <span class="badge badge-amber badge-dot">Da salvare</span>
+        }
+      </div>
+
+      @if (loading() && !preferences()) {
+        <div class="skeleton-form" aria-hidden="true">
+          @for (row of [1, 2, 3, 4]; track row) {
+            <span class="skeleton"></span>
+          }
+        </div>
+      } @else {
+        <div class="toggle-list">
+          <label class="toggle-row">
+            <span class="toggle-copy">
+              <strong>Notifiche push</strong>
+              <small>Interruttore generale per tutti gli avvisi inviati da MIDA.</small>
+            </span>
+            <input
+              class="switch"
+              type="checkbox"
+              role="switch"
+              [checked]="form().enabled"
+              (change)="setFlag('enabled', $event)"
+            />
+          </label>
+
+          <label class="toggle-row" [class.is-muted]="!form().enabled">
+            <span class="toggle-copy">
+              <strong>Nuovi compiti importati</strong>
+              <small>Un riepilogo con il numero di compiti per materia a ogni importazione.</small>
+            </span>
+            <input
+              class="switch"
+              type="checkbox"
+              role="switch"
+              [checked]="form().newAssignmentsEnabled"
+              [disabled]="!form().enabled"
+              (change)="setFlag('newAssignmentsEnabled', $event)"
+            />
+          </label>
+
+          <label class="toggle-row" [class.is-muted]="!form().enabled">
+            <span class="toggle-copy">
+              <strong>Promemoria di consegna</strong>
+              <small>Un avviso per i compiti non ancora completati, prima della scadenza.</small>
+            </span>
+            <input
+              class="switch"
+              type="checkbox"
+              role="switch"
+              [checked]="form().remindersEnabled"
+              [disabled]="!form().enabled"
+              (change)="setFlag('remindersEnabled', $event)"
+            />
+          </label>
+        </div>
+
+        <div class="reminder-box" [class.is-disabled]="!form().enabled || !form().remindersEnabled">
+          <div class="field-row">
+            <label class="field">
+              <span>Giorni di anticipo</span>
+              <input
+                type="number"
+                min="0"
+                max="14"
+                step="1"
+                inputmode="numeric"
+                [value]="form().reminderDaysBefore"
+                [disabled]="!form().enabled || !form().remindersEnabled"
+                (input)="setDays($event)"
+              />
+              <small>Da 0 a 14 giorni prima della consegna. Predefinito: 1 giorno.</small>
+            </label>
+
+            <label class="field">
+              <span>Orario del promemoria</span>
+              <input
+                type="time"
+                [value]="form().reminderTime"
+                [disabled]="!form().enabled || !form().remindersEnabled"
+                (input)="setTime($event)"
+              />
+              <small>Orario locale del fuso {{ form().timezone }}.</small>
+            </label>
+          </div>
+
+          <p class="reminder-note">
+            I compiti già completati non generano promemoria. Se MIDA resta spento all'orario
+            previsto, l'avviso viene inviato alla prima esecuzione utile senza duplicati.
+          </p>
+        </div>
+
+        @if (saveError(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+
+        <div class="preferences-foot">
+          <span class="updated-copy">
+            @if (preferences(); as saved) {
+              Ultimo aggiornamento: {{ dateTime(saved.updatedAt) }}
+            }
+          </span>
+          <div class="preferences-actions">
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              [disabled]="!dirty() || saving()"
+              (click)="reset()"
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm"
+              [disabled]="!canSave()"
+              (click)="save()"
+            >
+              @if (saving()) {
+                <span class="button-spinner" aria-hidden="true"></span>
+                Salvataggio…
+              } @else {
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 4h11l3 3v13H5V4Zm3 0v5h7V4M8 20v-6h8v6" />
+                </svg>
+                Salva preferenze
+              }
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+
+    <div class="side-stack">
+      <section class="card card-pad push-card">
+        <div class="section-heading">
+          <div>
+            <h2>Questo dispositivo</h2>
+            <p>Web Push funziona anche con la scheda di MIDA chiusa.</p>
+          </div>
+          <span [class]="'badge badge-' + pushStatusTone() + ' badge-dot'">
+            {{ pushStatusLabel() }}
+          </span>
+        </div>
+
+        <div class="push-state">
+          <span class="push-orb" [class.is-on]="push.subscribed()" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6M10.5 20a2 2 0 0 0 3 0" />
+            </svg>
+          </span>
+          <div class="push-copy">
+            <strong>{{ permissionLabel() }}</strong>
+            <p>
+              @if (push.subscribed()) {
+                Le notifiche sono attive su questo browser. Puoi inviare una prova per verificare
+                la consegna.
+              } @else if (push.permission() === 'denied') {
+                Il browser ha bloccato le notifiche per MIDA. Riabilita il permesso dalle
+                impostazioni del sito, poi ricarica la pagina.
+              } @else {
+                Attiva le notifiche quando vuoi: MIDA non chiede il permesso all'avvio.
+              }
+            </p>
+          </div>
+        </div>
+
+        @if (!pushSupported()) {
+          <div class="inline-note is-warning">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+            </svg>
+            <p>
+              Questo browser non supporta Web Push. Usa una versione recente di Chrome, Edge,
+              Firefox o Safari.
+            </p>
+          </div>
+        }
+
+        @if (push.devMode()) {
+          <div class="inline-note is-info">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8v.5m0 3.5v4M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+            </svg>
+            <p>
+              In sviluppo il service worker non è disponibile. Le notifiche push si attivano
+              dalla build di produzione servita da Docker su
+              <code>http://localhost:8080</code> o via HTTPS.
+            </p>
+          </div>
+        }
+
+        @if (push.error(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+
+        @if (!push.devMode()) {
+          <div class="push-actions">
+            @if (!push.subscribed()) {
+              <button
+                type="button"
+                class="btn btn-primary btn-sm btn-block"
+                [disabled]="push.busy() || !pushSupported() || push.permission() === 'denied'"
+                (click)="enablePush()"
+              >
+                @if (push.busy()) {
+                  <span class="button-spinner" aria-hidden="true"></span>
+                  Attivazione…
+                } @else {
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6M10.5 20a2 2 0 0 0 3 0" />
+                  </svg>
+                  Attiva notifiche push
+                }
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="btn btn-danger btn-sm btn-block"
+                [disabled]="push.busy()"
+                (click)="disablePush()"
+              >
+                Disattiva su questo dispositivo
+              </button>
+            }
+
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm btn-block"
+              [disabled]="push.busy() || !pushSupported()"
+              (click)="sendTest()"
+            >
+              Invia notifica di prova
+            </button>
+          </div>
+        }
+
+        <dl class="push-facts">
+          <div>
+            <dt>Permesso</dt>
+            <dd>{{ permissionLabel() }}</dd>
+          </div>
+          <div>
+            <dt>Dispositivi attivi</dt>
+            <dd>{{ status()?.activePushSubscriptions ?? '—' }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="card card-pad monitor-card">
+        <div class="section-heading">
+          <div>
+            <h2>Monitoraggio</h2>
+            <p>Stato della cartella Downloads e dell'importazione automatica.</p>
+          </div>
+          <span [class]="'badge badge-' + monitorTone() + ' badge-dot'">{{ monitorLabel() }}</span>
+        </div>
+
+        @if (statusError(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+
+        @if (status(); as monitor) {
+          <dl class="monitor-grid">
+            <div>
+              <dt>Importazioni</dt>
+              <dd>{{ monitor.totalImports }}</dd>
+            </div>
+            <div>
+              <dt>Compiti</dt>
+              <dd>{{ monitor.totalAssignments }}</dd>
+            </div>
+            <div>
+              <dt>Anomalie aperte</dt>
+              <dd [class.text-danger]="monitor.openIssues > 0">{{ monitor.openIssues }}</dd>
+            </div>
+            <div>
+              <dt>Push attivi</dt>
+              <dd>{{ monitor.activePushSubscriptions }}</dd>
+            </div>
+          </dl>
+
+          <div class="monitor-lines">
+            <span>
+              <i [class]="monitor.directoryReadable ? 'dot-ok' : 'dot-bad'" aria-hidden="true"></i>
+              {{ monitor.directoryReadable ? 'Cartella leggibile' : 'Cartella non accessibile' }}
+            </span>
+            <span>Ultima scansione: {{ dateTime(monitor.lastScanAt) }}</span>
+            <span>Ultimo import: {{ dateTime(monitor.lastSuccessfulImportAt) }}</span>
+          </div>
+
+          @if (monitor.lastError) {
+            <p class="monitor-error">{{ monitor.lastError }}</p>
+          }
+        } @else if (!statusError()) {
+          <div class="skeleton-form" aria-hidden="true">
+            <span class="skeleton"></span>
+            <span class="skeleton"></span>
+          </div>
+        }
+
+        <a class="btn btn-secondary btn-sm btn-block monitor-link" routerLink="/importazioni">
+          Apri la cronologia import
+        </a>
+      </section>
+
+      <section class="card card-pad google-settings-card">
+        <div class="section-heading">
+          <div>
+            <h2>Account Google</h2>
+            <p>Gmail e Classroom in sola lettura, con allegati archiviati in MIDA.</p>
+          </div>
+          <span [class]="'badge badge-' + googleStatusTone() + ' badge-dot'">
+            {{ googleStatusLabel() }}
+          </span>
+        </div>
+
+        @if (googleError(); as message) {
+          <p class="form-error" role="alert">{{ message }}</p>
+        }
+
+        <div class="google-client-block">
+          <div class="google-client-heading">
+            <div>
+              <h3>Client OAuth</h3>
+              <p>Il JSON scaricato da Google Cloud viene cifrato e salvato nel database.</p>
+            </div>
+            @if (googleClient()?.configured) {
+              <span class="badge badge-teal">Importato</span>
+            } @else {
+              <span class="badge badge-gray">Da importare</span>
+            }
+          </div>
+
+          @if (googleClient(); as client) {
+            @if (client.configured) {
+              <dl class="google-client-facts">
+                <div>
+                  <dt>Progetto</dt>
+                  <dd>{{ client.projectId || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>Client ID</dt>
+                  <dd class="mono">{{ client.clientId }}</dd>
+                </div>
+                <div>
+                  <dt>Redirect URI</dt>
+                  <dd class="mono">{{ client.redirectUri }}</dd>
+                </div>
+                <div>
+                  <dt>Importato</dt>
+                  <dd>{{ dateTime(client.importedAt) }}</dd>
+                </div>
+              </dl>
+            } @else {
+              <p class="google-settings-copy">
+                Scarica il JSON del client OAuth da Google Cloud e importalo qui: MIDA legge
+                client ID, secret e redirect URI dal database, senza variabili nel file
+                <code>.env</code>.
+              </p>
+            }
+            <div class="google-settings-actions">
+              <label class="btn btn-secondary btn-sm file-button" [class.is-disabled]="importingClient()">
+                {{
+                  importingClient()
+                    ? 'Importazione…'
+                    : client.configured
+                      ? 'Sostituisci JSON'
+                      : 'Importa JSON'
+                }}
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  [disabled]="importingClient()"
+                  (change)="importClientFile($event)"
+                />
+              </label>
+              <a class="btn btn-ghost btn-sm" routerLink="/guida-google">Guida passo passo</a>
+              @if (client.configured) {
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  [disabled]="importingClient()"
+                  (click)="removeGoogleClient()"
+                >
+                  Rimuovi client
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="skeleton-form" aria-hidden="true">
+              <span class="skeleton"></span>
+            </div>
+          }
+        </div>
+
+        <div class="google-connection-block">
+          @if (googleStatus(); as google) {
+            @if (!google.configured) {
+              <p class="google-settings-copy">
+                Importa il client OAuth per abilitare il collegamento dell'account Google.
+              </p>
+            } @else if (!google.connected) {
+              <p class="google-settings-copy">
+                Collega l'account Google della scuola per scaricare email, allegati e materiali
+                Classroom. MIDA non vede la password Google.
+              </p>
+              <a class="btn btn-primary btn-sm btn-block" href="/api/google/connect">
+                Collega account Google
+              </a>
+            } @else {
+              <p class="google-settings-copy">
+                <strong>{{ google.accountEmail || 'Account Google' }}</strong><br />
+                Ultima sincronizzazione Classroom: {{ dateTime(google.lastSyncAt) }}
+              </p>
+
+              <label class="field">
+                <span>Ricerca Gmail</span>
+                <input
+                  type="text"
+                  [value]="gmailQuery()"
+                  (input)="setGmailQuery($event)"
+                  placeholder="from:didup"
+                />
+              </label>
+
+              <div class="toggle-list google-toggles">
+                <label class="toggle-row">
+                  <span class="toggle-copy">
+                    <strong>Email Gmail</strong>
+                    <small>Scarica messaggi e allegati che corrispondono alla ricerca.</small>
+                  </span>
+                  <input
+                    class="switch"
+                    type="checkbox"
+                    role="switch"
+                    [checked]="gmailEnabled()"
+                    (change)="setGmailEnabled($event)"
+                  />
+                </label>
+                <label class="toggle-row">
+                  <span class="toggle-copy">
+                    <strong>Google Classroom</strong>
+                    <small>Si aggiorna quando arriva una nuova email o manualmente.</small>
+                  </span>
+                  <input
+                    class="switch"
+                    type="checkbox"
+                    role="switch"
+                    [checked]="classroomEnabled()"
+                    (change)="setClassroomEnabled($event)"
+                  />
+                </label>
+              </div>
+
+              <div class="google-settings-actions">
+                <button
+                  type="button"
+                  class="btn btn-primary btn-sm"
+                  (click)="saveGoogle()"
+                  [disabled]="savingGoogle()"
+                >
+                  {{ savingGoogle() ? 'Salvataggio…' : 'Salva' }}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="disconnectGoogle()">
+                  Scollega
+                </button>
+                <a class="btn btn-ghost btn-sm" routerLink="/posta">Apri Posta</a>
+              </div>
+            }
+          } @else {
+            <div class="skeleton-form" aria-hidden="true">
+              <span class="skeleton"></span>
+              <span class="skeleton"></span>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="card card-pad limits-card">
+    <div class="section-heading">
+      <div>
+        <h2>Come funzionano le notifiche</h2>
+        <p>Web Push arriva anche a scheda chiusa, entro i limiti del browser e del sistema.</p>
+      </div>
+    </div>
+    <div class="limits-grid">
+      <article>
+        <span class="limit-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4V6Zm0 1 8 6 8-6" /></svg>
+        </span>
+        <div>
+          <strong>Scheda chiusa</strong>
+          <p>
+            Le notifiche vengono recapitate dal browser anche quando MIDA non è aperta, purché il
+            browser o il sistema operativo restino in esecuzione.
+          </p>
+        </div>
+      </article>
+      <article>
+        <span class="limit-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm3 17h4" />
+          </svg>
+        </span>
+        <div>
+          <strong>iPhone e iPad</strong>
+          <p>
+            Su iOS e iPadOS 16.4 o successivi, Web Push richiede che MIDA sia aggiunta alla
+            schermata Home e aperta da lì.
+          </p>
+        </div>
+      </article>
+      <article>
+        <span class="limit-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Z" />
+            <path d="M4 4l16 16M19 12a7 7 0 0 0-.4-2.3M5 12c0-1.3.4-2.5 1-3.5" />
+          </svg>
+        </span>
+        <div>
+          <strong>Permesso esplicito</strong>
+          <p>
+            MIDA richiede il permesso solo dopo un clic su “Attiva notifiche push”. Se lo neghi,
+            il browser non mostrerà più la richiesta finché non lo riabiliti.
+          </p>
+        </div>
+      </article>
+      <article>
+        <span class="limit-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" />
+            <circle cx="12" cy="12" r="3.5" />
+          </svg>
+        </span>
+        <div>
+          <strong>Risparmio energetico</strong>
+          <p>
+            Alcuni sistemi ritardano le notifiche quando il dispositivo è in risparmio energetico o
+            il browser è sospeso. È un limite del sistema operativo, non di MIDA.
+          </p>
+        </div>
+      </article>
+    </div>
+  </section>
+</div>

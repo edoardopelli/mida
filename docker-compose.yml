@@ -1,0 +1,134 @@
+name: mida
+
+services:
+  mida-mongodb:
+    image: mongo:8.0
+    container_name: mida-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: mida
+    volumes:
+      - mida-mongodb-data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - mida-internal
+
+  mida-backend:
+    build:
+      context: ./backend
+    container_name: mida-backend
+    restart: unless-stopped
+    depends_on:
+      mida-mongodb:
+        condition: service_healthy
+    environment:
+      MONGODB_URI: mongodb://mida-mongodb:27017/mida
+      SCHOOL_YEAR_START: ${SCHOOL_YEAR_START:-2026}
+      IMPORTS_DIRECTORY: /imports
+      IMPORT_MONITORING_ENABLED: ${IMPORT_MONITORING_ENABLED:-true}
+      IMPORT_POLL_INTERVAL_MS: ${IMPORT_POLL_INTERVAL_MS:-5000}
+      IMPORT_STABILITY_SCANS: ${IMPORT_STABILITY_SCANS:-2}
+      IMPORT_MAX_FILE_SIZE_BYTES: ${IMPORT_MAX_FILE_SIZE_BYTES:-10485760}
+      IMPORT_DELETE_AFTER_IMPORT: ${IMPORT_DELETE_AFTER_IMPORT:-true}
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:mida@localhost}
+      GOOGLE_ENABLED: ${GOOGLE_ENABLED:-true}
+      GOOGLE_GMAIL_ENABLED: ${GOOGLE_GMAIL_ENABLED:-true}
+      GOOGLE_GMAIL_QUERY: "${GOOGLE_GMAIL_QUERY:-from:didup}"
+      GOOGLE_GMAIL_MAX_RESULTS: ${GOOGLE_GMAIL_MAX_RESULTS:-50}
+      GOOGLE_GMAIL_SYNC_INTERVAL_MS: ${GOOGLE_GMAIL_SYNC_INTERVAL_MS:-300000}
+      GOOGLE_GMAIL_INITIAL_DELAY_MS: ${GOOGLE_GMAIL_INITIAL_DELAY_MS:-30000}
+      GOOGLE_CLASSROOM_ENABLED: ${GOOGLE_CLASSROOM_ENABLED:-true}
+      GOOGLE_CLASSROOM_ANNOUNCEMENTS: ${GOOGLE_CLASSROOM_ANNOUNCEMENTS:-true}
+      GOOGLE_MAX_ATTACHMENT_SIZE_BYTES: ${GOOGLE_MAX_ATTACHMENT_SIZE_BYTES:-104857600}
+      TZ: Europe/Rome
+    volumes:
+      - "${DOWNLOADS_PATH:?Imposta DOWNLOADS_PATH nel file .env}:/imports"
+    user: "${MIDA_UID:-10001}:${MIDA_GID:-10001}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mida-internal
+
+  mida-frontend:
+    build:
+      context: ./frontend
+    container_name: mida-frontend
+    restart: unless-stopped
+    depends_on:
+      mida-backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8200:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mida-internal
+
+  mida-proxy:
+    image: nginx:1.29-alpine
+    container_name: mida-proxy
+    restart: unless-stopped
+    depends_on:
+      mida-frontend:
+        condition: service_healthy
+    ports:
+      - "4443:4443"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mida-internal
+
+volumes:
+  mida-mongodb-data:
+    name: mida-mongodb-data
+
+networks:
+  mida-internal:
+    name: mida-internal

@@ -1,0 +1,374 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">DidUP Family · Calendario</p>
+      <h1>Compiti, senza perderne uno.</h1>
+      <p class="lead">
+        Tutti i compiti importati automaticamente dai file di DidUP Family, ordinati per scadenza.
+        Apri un compito per leggerne la descrizione completa e segnarlo come svolto.
+      </p>
+    </div>
+    <div class="header-actions">
+      @if (store.lastLoadedAt(); as loadedAt) {
+        <span class="sync-copy">
+          Aggiornato alle
+          {{ loadedAt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) }}
+        </span>
+      }
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        (click)="store.reloadAll()"
+        [disabled]="store.loading() || store.refreshing()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+        </svg>
+        Aggiorna
+      </button>
+    </div>
+  </header>
+
+  @if (showEmptyDatabase()) {
+    <section class="card empty-state" aria-live="polite">
+      <span class="empty-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+          <path d="m9 14 2 2 4-5" />
+        </svg>
+      </span>
+      <h2>Nessun compito presente</h2>
+      <p>I compiti condivisi da DidUP Family compariranno automaticamente qui.</p>
+      <a class="btn btn-secondary btn-sm empty-link" routerLink="/importazioni">
+        Controlla il monitoraggio
+      </a>
+    </section>
+  } @else {
+    <section class="card filter-card" aria-label="Filtri del calendario">
+      <div class="filter-main">
+        <label class="field filter-search">
+          <span>Cerca</span>
+          <span class="input-with-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Descrizione, materia, professore…"
+              [value]="store.filters().q"
+              (input)="onSearch($event)"
+            />
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Materia</span>
+          <select [value]="store.filters().subject" (change)="onSubject($event)">
+            <option value="">Tutte le materie</option>
+            @for (subject of store.subjects(); track subject) {
+              <option [value]="subject">{{ subject }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Professore</span>
+          <select [value]="store.filters().teacher" (change)="onTeacher($event)">
+            <option value="">Tutti i professori</option>
+            @for (teacher of store.teachers(); track teacher) {
+              <option [value]="teacher">{{ teacher }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Stato</span>
+          <select [value]="store.filters().completion" (change)="onCompletion($event)">
+            <option value="all">Tutti i compiti</option>
+            <option value="open">Da fare</option>
+            <option value="completed">Completati</option>
+          </select>
+        </label>
+
+        <div class="field date-field">
+          <span>Mostra per data</span>
+          <div class="segmented" role="group" aria-label="Tipo di data mostrata">
+            <button
+              type="button"
+              [class.is-active]="store.filters().dateField === 'DUE'"
+              [attr.aria-pressed]="store.filters().dateField === 'DUE'"
+              (click)="setDateField('DUE')"
+            >
+              Consegna
+            </button>
+            <button
+              type="button"
+              [class.is-active]="store.filters().dateField === 'ASSIGNED'"
+              [attr.aria-pressed]="store.filters().dateField === 'ASSIGNED'"
+              (click)="setDateField('ASSIGNED')"
+            >
+              Assegnazione
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-foot">
+        <div class="subject-legend" aria-label="Legenda materie">
+          @for (entry of subjectLegend(); track entry.subject) {
+            <span
+              class="legend-chip"
+              [style.background]="entry.palette.background"
+              [style.border-color]="entry.palette.border"
+              [style.color]="entry.palette.text"
+            >
+              <i [style.background]="entry.palette.strong"></i>
+              {{ entry.subject }}
+            </span>
+          }
+          @if (subjectLegend().length === 0) {
+            <span class="tiny muted">Nessuna materia visibile nel periodo.</span>
+          }
+        </div>
+        <div class="filter-summary">
+          <span><strong>{{ store.assignments().length }}</strong> compiti nel periodo</span>
+          <span class="summary-divider" aria-hidden="true"></span>
+          <span><strong>{{ store.openVisible() }}</strong> da fare</span>
+          @if (store.filtersActive()) {
+            <button type="button" class="btn btn-ghost btn-sm" (click)="resetFilters()">
+              Azzera filtri
+            </button>
+          }
+        </div>
+      </div>
+    </section>
+
+    @if (store.error(); as error) {
+      <div class="card error-banner" role="alert">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+        </svg>
+        <p>{{ error }}</p>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="retry()">Riprova</button>
+      </div>
+    }
+
+    <section class="card calendar-card" [class.is-refreshing]="store.refreshing()">
+      <div class="calendar-meta">
+        <div>
+          <span class="calendar-range">{{ activeView() === 'listMonth' ? agendaRangeLabel() : rangeLabel() }}</span>
+          <span class="calendar-hint">{{ store.filters().dateField === 'DUE' ? 'Date di consegna' : 'Date di assegnazione' }}</span>
+        </div>
+        <div class="calendar-meta-actions">
+          @if (store.loading() || store.refreshing()) {
+            <span class="sr-loading">Aggiornamento…</span>
+          }
+          <div class="segmented calendar-views" role="group" aria-label="Vista del calendario">
+            @for (view of views; track view.id) {
+              <button
+                type="button"
+                [class.is-active]="activeView() === view.id"
+                [attr.aria-pressed]="activeView() === view.id"
+                (click)="changeView(view.id)"
+              >
+                {{ view.label }}
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+      @if (activeView() !== 'listMonth' && store.assignments().length === 0 && store.filtersActive()) {
+        <div class="filter-empty">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+          </svg>
+          <p>Nessun compito corrisponde ai filtri selezionati.</p>
+          <button type="button" class="btn btn-ghost btn-sm" (click)="resetFilters()">Mostra tutti</button>
+        </div>
+      }
+      <div class="calendar-view" [class.is-hidden]="activeView() === 'listMonth'">
+        <full-calendar [options]="calendarOptions" [events]="events()" />
+      </div>
+
+      @if (activeView() === 'listMonth') {
+        <div class="agenda-panel">
+          <div class="agenda-toolbar">
+            <label class="field">
+              <span>Dal</span>
+              <input type="date" [value]="agendaFrom()" (change)="onAgendaFrom($event)" />
+            </label>
+            <label class="field">
+              <span>Al</span>
+              <input type="date" [value]="agendaTo()" (change)="onAgendaTo($event)" />
+            </label>
+            <label class="field">
+              <span>Ordina per</span>
+              <select [value]="agendaSort()" (change)="onAgendaSort($event)">
+                <option value="date-asc">Data crescente</option>
+                <option value="date-desc">Data decrescente</option>
+              </select>
+            </label>
+            <span class="agenda-count">
+              <strong>{{ agendaAssignments().length }}</strong> compiti
+            </span>
+          </div>
+
+          @if (agendaError(); as error) {
+            <div class="filter-empty" role="alert">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" />
+              </svg>
+              <p>{{ error }}</p>
+            </div>
+          }
+
+          @if (agendaLoading()) {
+            <div class="agenda-loading" aria-live="polite">
+              <span class="sr-loading">Caricamento agenda…</span>
+            </div>
+          } @else if (agendaGroups().length === 0) {
+            <div class="agenda-empty">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+              </svg>
+              <div>
+                <strong>Nessun compito nell'intervallo scelto</strong>
+                <p>Modifica le date o i filtri per vedere altri compiti.</p>
+              </div>
+            </div>
+          } @else {
+            <div class="agenda-list">
+              @for (group of agendaGroups(); track group.date) {
+                <section class="agenda-group">
+                  <h3 class="agenda-date">{{ group.label }}</h3>
+                  @for (item of group.items; track item.id) {
+                    <button
+                      type="button"
+                      class="agenda-row"
+                      [class.is-completed]="item.completed"
+                      (click)="openAgendaItem(item)"
+                    >
+                      <span
+                        class="agenda-subject"
+                        [style.background]="paletteFor(item).background"
+                        [style.color]="paletteFor(item).text"
+                        [style.border-color]="paletteFor(item).border"
+                      >
+                        {{ item.subject }}
+                      </span>
+                      <span class="agenda-main">
+                        <strong>{{ descriptionPreview(item) }}</strong>
+                        <small>{{ item.teacher || 'Professore non indicato' }}</small>
+                      </span>
+                      <span class="agenda-meta">
+                        <span>{{ agendaSecondary(item) }}</span>
+                        <span [class.agenda-overdue]="!item.completed && item.dueDate < agendaToday()">
+                          {{ dueText(item) }}
+                        </span>
+                        @if (item.completed) {
+                          <span class="badge badge-teal">Completato</span>
+                        }
+                      </span>
+                    </button>
+                  }
+                </section>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>
+
+@if (store.selected(); as item) {
+  <div class="detail-backdrop" (click)="closeDetail()"></div>
+  <aside
+    class="detail-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="detail-title"
+  >
+    <header class="detail-header">
+      <span
+        class="detail-subject"
+        [style.background]="paletteFor(item).background"
+        [style.color]="paletteFor(item).text"
+        [style.border-color]="paletteFor(item).border"
+      >
+        {{ item.subject }}
+      </span>
+      <button type="button" class="icon-button" (click)="closeDetail()" aria-label="Chiudi dettaglio">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+      </button>
+    </header>
+
+    <div class="detail-body">
+      <h2 id="detail-title">{{ descriptionPreview(item) }}</h2>
+      <p class="detail-teacher">{{ item.teacher || 'Professore non indicato' }}</p>
+
+      <div class="detail-dates">
+        <div>
+          <span class="detail-label">Assegnato</span>
+          <strong>{{ formatDate(item.assignedDate) }}</strong>
+          @if (item.assignedDateRaw) {
+            <small>{{ item.assignedDateRaw }}</small>
+          }
+        </div>
+        <div>
+          <span class="detail-label">Consegna</span>
+          <strong>{{ formatDate(item.dueDate) }}</strong>
+          <small class="due-copy">{{ dueText(item) }}</small>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="btn detail-complete"
+        [class.btn-primary]="!item.completed"
+        [class.btn-secondary]="item.completed"
+        (click)="toggleSelected()"
+      >
+        @if (item.completed) {
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" /></svg>
+          Riporta da fare
+        } @else {
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+          Segna come completato
+        }
+      </button>
+
+      <section class="detail-description">
+        <h3>Descrizione completa</h3>
+        <p>{{ item.description }}</p>
+      </section>
+
+      <section class="detail-source">
+        <h3>Origine</h3>
+        <dl>
+          <div>
+            <dt>File importato</dt>
+            <dd>{{ item.originalFilename }}</dd>
+          </div>
+          <div>
+            <dt>Codice DidUP</dt>
+            <dd class="mono">{{ item.sourceCode }}</dd>
+          </div>
+          <div>
+            <dt>Data di consegna</dt>
+            <dd>{{ longDate(item) }}</dd>
+          </div>
+          @if (item.revision > 1) {
+            <div>
+              <dt>Revisione</dt>
+              <dd>
+                <span class="badge badge-amber">#{{ item.revision }}</span>
+                aggiornato il {{ formatDate(item.updatedAt) }}
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
+    </div>
+  </aside>
+}

@@ -1,0 +1,98 @@
+<a class="skip-link" href="#contenuto">Vai al contenuto</a>
+
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navigazione principale">
+    <a class="brand" routerLink="/calendario" aria-label="MIDA, vai al calendario">
+      <span class="brand-mark" aria-hidden="true">
+        <span>M</span>
+        <i></i>
+      </span>
+      <span class="brand-copy">
+        <strong>MIDA</strong>
+        <small>Monitoraggio Integrato<br />dei Doveri Assegnati</small>
+      </span>
+    </a>
+
+    <nav class="side-nav">
+      @for (item of navigation; track item.path) {
+        <a
+          class="nav-link"
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path [attr.d]="item.icon" />
+          </svg>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <div [class]="'connection-pill ' + connectionClass()">
+        <span class="connection-dot" aria-hidden="true"></span>
+        <span>{{ connectionLabel() }}</span>
+      </div>
+      <p class="sidebar-note">
+        I file DidUP, Gmail e Classroom vengono letti automaticamente.
+      </p>
+    </div>
+  </aside>
+
+  <header class="mobile-header">
+    <a class="brand brand-compact" routerLink="/calendario" aria-label="MIDA">
+      <span class="brand-mark" aria-hidden="true">
+        <span>M</span>
+        <i></i>
+      </span>
+      <span class="brand-copy">
+        <strong>MIDA</strong>
+        <small>DidUP Family</small>
+      </span>
+    </a>
+    <span [class]="'connection-dot-only ' + connectionClass()" [attr.aria-label]="connectionLabel()">
+      <span class="connection-dot" aria-hidden="true"></span>
+    </span>
+  </header>
+
+  <main id="contenuto" class="main-content" tabindex="-1">
+    <router-outlet />
+  </main>
+
+  <nav class="bottom-nav" aria-label="Navigazione">
+    @for (item of navigation; track item.path) {
+      <a
+        class="bottom-link"
+        [routerLink]="item.path"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path [attr.d]="item.icon" />
+        </svg>
+        <span>{{ item.shortLabel }}</span>
+      </a>
+    }
+  </nav>
+</div>
+
+<div class="toast-stack" aria-live="polite" aria-atomic="false">
+  @for (toast of toasts.toasts(); track toast.id) {
+    <div [class]="'toast toast-' + toast.kind" role="status">
+      <span class="toast-icon" aria-hidden="true">
+        @if (toast.kind === 'success') {
+          <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
+        } @else if (toast.kind === 'error') {
+          <svg viewBox="0 0 24 24"><path d="M12 8v5m0 3.5v.5M12 3 2.5 20h19L12 3Z" /></svg>
+        } @else {
+          <svg viewBox="0 0 24 24"><path d="M12 8v.5m0 3.5v4M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" /></svg>
+        }
+      </span>
+      <p>{{ toast.message }}</p>
+      <button type="button" class="icon-button toast-close" (click)="dismissToast(toast.id)" aria-label="Chiudi notifica">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+      </button>
+    </div>
+  }
+</div>

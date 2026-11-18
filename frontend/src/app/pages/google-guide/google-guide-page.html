@@ -1,0 +1,190 @@
+<div class="page guide-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">MIDA · Guida</p>
+      <h1>Collegare Gmail e Classroom.</h1>
+      <p class="lead">
+        MIDA usa un client OAuth creato da te su Google Cloud. Il file JSON che Google
+        genera viene importato nell'app, cifrato e salvato nel database: nessuna
+        credenziale nel file <code>.env</code>.
+      </p>
+    </div>
+    <div class="header-actions">
+      <a class="btn btn-secondary btn-sm" routerLink="/impostazioni">Torna alle impostazioni</a>
+    </div>
+  </header>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Prima di iniziare</h2>
+        <p>Servono un account Google e pochi minuti nella console Google Cloud.</p>
+      </div>
+    </div>
+    <ul class="guide-list">
+      <li>L'account Google usato per MIDA deve poter accedere a Gmail e Classroom della scuola.</li>
+      <li>Il progetto Google Cloud può essere nuovo o già esistente.</li>
+      <li>MIDA richiede solo permessi di lettura: non modifica email, corsi o file.</li>
+    </ul>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>1. Crea il progetto e abilita le API</h2>
+        <p>Tutto si fa da <span class="nowrap">console.cloud.google.com</span>.</p>
+      </div>
+    </div>
+    <ol class="guide-steps">
+      <li>
+        <strong>Apri la console</strong> e crea un progetto (o selezionane uno esistente)
+        dal selettore in alto.
+      </li>
+      <li>
+        Vai su <strong>API e servizi → Libreria</strong> e abilita:
+        <span class="api-tags">
+          <span>Google Classroom API</span>
+          <span>Google Drive API</span>
+          <span>Gmail API</span>
+        </span>
+      </li>
+      <li>
+        Vai su <strong>API e servizi → Schermata di consenso OAuth</strong>. Compila il
+        nome dell'app e l'email di supporto. Se il progetto è in stato
+        <em>Testing</em>, aggiungi il tuo account tra gli <strong>utenti di test</strong>.
+      </li>
+    </ol>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>2. Crea il client OAuth</h2>
+        <p>Il client deve essere di tipo <strong>Applicazione web</strong>.</p>
+      </div>
+    </div>
+    <ol class="guide-steps">
+      <li>
+        Vai su <strong>API e servizi → Credenziali → Crea credenziali → ID client OAuth</strong>.
+      </li>
+      <li>
+        Scegli <strong>Applicazione web</strong> come tipo di applicazione.
+      </li>
+      <li>
+        In <strong>URI di reindirizzamento autorizzati</strong> aggiungi esattamente:
+        <div class="copy-row">
+          <code>{{ redirectUri }}</code>
+        </div>
+        <small class="guide-hint">
+          Se cambi porta o dominio di MIDA, aggiorna qui l'URI e reimporta il JSON.
+        </small>
+      </li>
+      <li>
+        Premi <strong>Crea</strong> e scarica il file JSON con il pulsante di download.
+        Il file contiene <code>client_id</code>, <code>client_secret</code> e i redirect URI.
+      </li>
+    </ol>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>3. Importa il JSON in MIDA</h2>
+        <p>Da qui in poi non serve più toccare la console, tranne per cambiare client.</p>
+      </div>
+    </div>
+    <ol class="guide-steps">
+      <li>
+        Apri <a routerLink="/impostazioni">Impostazioni → Account Google</a>.
+      </li>
+      <li>
+        Premi <strong>Importa JSON</strong> e seleziona il file scaricato da Google.
+      </li>
+      <li>
+        MIDA verifica che il JSON contenga il redirect URI corretto, genera una chiave
+        UUID, cifra il file con AES-256-GCM e lo salva nella collection
+        <code>googleClientCredentials</code>.
+      </li>
+      <li>
+        Premi <strong>Collega account Google</strong>, scegli l'account della scuola e
+        autorizza i permessi di lettura.
+      </li>
+    </ol>
+    <a class="btn btn-primary btn-sm" routerLink="/impostazioni">Vai alle impostazioni</a>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Permessi richiesti</h2>
+        <p>Sono tutti in sola lettura e vengono mostrati da Google prima dell'autorizzazione.</p>
+      </div>
+    </div>
+    <ul class="guide-list">
+      <li><strong>Classroom</strong> — leggere corsi, compiti, materiali e annunci.</li>
+      <li><strong>Drive (sola lettura)</strong> — scaricare gli allegati dei materiali Classroom.</li>
+      <li><strong>Gmail (sola lettura)</strong> — cercare e archiviare le email della scuola.</li>
+      <li><strong>Indirizzo email</strong> — mostrare quale account è collegato.</li>
+    </ul>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Sicurezza e dati</h2>
+      </div>
+    </div>
+    <ul class="guide-list">
+      <li>
+        Il JSON del client e i token OAuth sono cifrati in AES-256-GCM. La chiave UUID è
+        generata da MIDA e salvata accanto ai dati cifrati, mai in chiaro nel repository.
+      </li>
+      <li>
+        <strong>Rimuovi client</strong> elimina le credenziali e scollega l'account; email
+        e materiali già scaricati restano in MIDA finché non li elimini.
+      </li>
+      <li>
+        Puoi revocare l'accesso in qualsiasi momento anche da
+        <span class="nowrap">myaccount.google.com → Sicurezza → App di terze parti</span>.
+      </li>
+    </ul>
+  </section>
+
+  <section class="card card-pad">
+    <div class="section-heading">
+      <div>
+        <h2>Problemi comuni</h2>
+      </div>
+    </div>
+    <dl class="guide-faq">
+      <div>
+        <dt>Google mostra “redirect_uri_mismatch”</dt>
+        <dd>
+          L'URI autorizzato non coincide. Deve essere identico a
+          <code>{{ redirectUri }}</code>, compresi schema, porta e path.
+        </dd>
+      </div>
+      <div>
+        <dt>MIDA rifiuta il JSON</dt>
+        <dd>
+          Il file non contiene il redirect URI di MIDA. Aggiungilo al client OAuth,
+          riscarica il JSON e reimportalo.
+        </dd>
+      </div>
+      <div>
+        <dt>Google blocca l'accesso</dt>
+        <dd>
+          Se il progetto è in stato Testing, aggiungi il tuo account tra gli utenti di
+          test nella schermata di consenso OAuth.
+        </dd>
+      </div>
+      <div>
+        <dt>L'account risulta da ricollegare</dt>
+        <dd>
+          Il token è stato revocato o è scaduto. Premi <strong>Collega account Google</strong>
+          nelle impostazioni per autorizzarlo di nuovo.
+        </dd>
+      </div>
+    </dl>
+  </section>
+</div>
