@@ -1,5 +1,7 @@
 package it.mida.google.email;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.imports.ImportService;
 import it.mida.parser.DidupContentDetector;
 import it.mida.parser.DidupFileName;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
  * esportazioni DidUP, indipendentemente dalla sorgente (Gmail o altre).
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class DidupAttachmentImporter {
 
     private final ImportService importService;

@@ -1,5 +1,7 @@
 package it.mida.imports;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.config.MidaProperties;
 import it.mida.events.MidaEventPublisher;
 import it.mida.events.MidaEvents;
@@ -32,6 +34,8 @@ import org.springframework.stereotype.Component;
  * through Docker Desktop bind mounts on macOS.
  */
 @Component
+@ConditionalOnMidaRole(value = {MidaRole.STANDALONE, MidaRole.ORIGIN, MidaRole.MASTER},
+        originResponsibilities = true)
 public class DownloadsMonitor {
 
     private static final Logger log = LoggerFactory.getLogger(DownloadsMonitor.class);

@@ -1,5 +1,7 @@
 package it.mida.google.classroom.api;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.PageResponse;
 import it.mida.google.classroom.ClassroomQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/google/classroom")
 @Tag(name = "Classroom", description = "Compiti, materiali e annunci di Google Classroom")
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ClassroomController {
 
     private final ClassroomQueryService queryService;

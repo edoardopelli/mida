@@ -1,5 +1,7 @@
 package it.mida.notifications;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.config.MidaProperties;
 import it.mida.homework.HomeworkQueryService;
 import it.mida.homework.api.HomeworkQuery;
@@ -25,6 +27,7 @@ import org.springframework.util.StringUtils;
  * a reminder.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ReminderService {
 
     private static final Logger log = LoggerFactory.getLogger(ReminderService.class);

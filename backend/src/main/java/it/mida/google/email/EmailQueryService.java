@@ -1,5 +1,7 @@
 package it.mida.google.email;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.MidaNotFoundException;
 import it.mida.common.PageResponse;
 import it.mida.google.email.api.EmailAttachmentDto;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class EmailQueryService {
 
     private final MongoTemplate mongoTemplate;

@@ -1,5 +1,7 @@
 package it.mida.google;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.events.MidaEventPublisher;
 import it.mida.events.MidaEvents;
 import it.mida.google.classroom.ClassroomSyncService;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
  * quando arriva almeno una nuova email. La posta è gestita via Gmail API.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GoogleSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleSyncService.class);

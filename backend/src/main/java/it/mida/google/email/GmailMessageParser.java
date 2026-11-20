@@ -1,5 +1,7 @@
 package it.mida.google.email;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import tools.jackson.databind.JsonNode;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Component;
  * e allegati, inclusi quelli annidati in parti MIME multipart.
  */
 @Component
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GmailMessageParser {
 
     private static final Pattern CHARSET_PATTERN =

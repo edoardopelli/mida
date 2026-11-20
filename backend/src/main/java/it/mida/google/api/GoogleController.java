@@ -1,5 +1,7 @@
 package it.mida.google.api;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.google.GoogleClientCredentialsService;
 import it.mida.google.GoogleConnection;
 import it.mida.google.GoogleConnectionService;
@@ -29,6 +31,7 @@ import org.slf4j.LoggerFactory;
 @RestController
 @RequestMapping("/api/google")
 @Tag(name = "Google Classroom", description = "Connessione OAuth e sincronizzazione Classroom")
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GoogleController {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleController.class);

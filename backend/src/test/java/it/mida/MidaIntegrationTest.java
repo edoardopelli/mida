@@ -15,6 +15,7 @@ import it.mida.diary.DiaryImport;
 import it.mida.diary.DiaryImportRepository;
 import it.mida.diary.DiaryQueryService;
 import it.mida.attachments.AttachmentStorageService;
+import it.mida.config.MidaProperties;
 import it.mida.google.classroom.ClassroomItem;
 import it.mida.google.classroom.ClassroomItemRepository;
 import it.mida.google.classroom.ClassroomMaterial;
@@ -139,6 +140,8 @@ class MidaIntegrationTest {
     LegacyDataMigrator legacyDataMigrator;
     @Autowired
     ImportService importService;
+    @Autowired
+    MidaProperties midaProperties;
     @Autowired
     AttachmentStorageService googleFileService;
     @Autowired
@@ -412,6 +415,28 @@ class MidaIntegrationTest {
         ImportStatusService.ImportStatusDto status = statusService.status();
         assertThat(status.totalImports()).isEqualTo(1);
         assertThat(status.totalAssignments()).isEqualTo(1);
+    }
+
+    @Test
+    void standaloneImportWithDeletionDisabledKeepsTheSourceFile() throws Exception {
+        boolean previous = midaProperties.getImports().isDeleteAfterImport();
+        midaProperties.getImports().setDeleteAfterImport(false);
+        try {
+            String code = nextCode();
+            String content = validContent("Compito senza cancellazione");
+            Path file = importsDirectory.resolve("text-" + code + ".txt");
+            Files.writeString(file, content, StandardCharsets.UTF_8);
+
+            monitor.scan();
+            monitor.scan();
+
+            assertThat(importRepository.findBySourceCode(code)).isPresent();
+            assertThat(file).exists();
+            assertThat(issueRepository.findAll()).noneMatch(issue ->
+                    issue.getType() == ImportIssue.Type.FILE_DELETION_FAILED);
+        } finally {
+            midaProperties.getImports().setDeleteAfterImport(previous);
+        }
     }
 
     @Test

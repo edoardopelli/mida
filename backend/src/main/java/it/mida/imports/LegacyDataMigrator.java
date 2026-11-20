@@ -1,5 +1,7 @@
 package it.mida.imports;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.ImportReference;
 import it.mida.config.MidaProperties;
 import it.mida.diary.DiaryEntryWriter;
@@ -36,6 +38,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class LegacyDataMigrator implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(LegacyDataMigrator.class);

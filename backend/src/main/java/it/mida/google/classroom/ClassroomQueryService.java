@@ -1,5 +1,7 @@
 package it.mida.google.classroom;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.MidaNotFoundException;
 import it.mida.common.PageResponse;
 import it.mida.google.classroom.api.ClassroomCourseDto;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ClassroomQueryService {
 
     private final MongoTemplate mongoTemplate;

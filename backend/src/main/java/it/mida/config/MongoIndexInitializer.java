@@ -1,12 +1,15 @@
 package it.mida.config;
 
 import com.mongodb.client.model.IndexOptions;
+import it.mida.cluster.ClusterProperties;
+import it.mida.cluster.MidaRole;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.Ordered;
@@ -46,9 +49,16 @@ public class MongoIndexInitializer implements ApplicationRunner {
             "tx_diary_entries_search");
 
     private final MongoTemplate mongoTemplate;
+    private final MongoTemplate localMongoTemplate;
+    private final ClusterProperties clusterProperties;
 
-    public MongoIndexInitializer(MongoTemplate mongoTemplate) {
+    public MongoIndexInitializer(
+            MongoTemplate mongoTemplate,
+            @Qualifier("localMongoTemplate") MongoTemplate localMongoTemplate,
+            ClusterProperties clusterProperties) {
         this.mongoTemplate = mongoTemplate;
+        this.localMongoTemplate = localMongoTemplate;
+        this.clusterProperties = clusterProperties;
     }
 
     @Override
@@ -59,11 +69,19 @@ public class MongoIndexInitializer implements ApplicationRunner {
             dropLegacyIndexes("diaryImports", LEGACY_DIARY_INDEXES);
             createHomeworkIndexes();
             createDiaryIndexes();
+            createClusterFileIndexes();
             createSupportIndexes();
+            createLocalIndexes();
             dropLegacyIndexes("emailMessages", List.of("ux_email_messages_gmail_id"));
             createGoogleIndexes();
             log.info("Indici MongoDB MIDA verificati");
         } catch (RuntimeException ex) {
+            if (clusterProperties.getRole() != MidaRole.STANDALONE) {
+                throw new IllegalStateException(
+                        "Impossibile creare gli indici MongoDB per il ruolo "
+                                + clusterProperties.getRole() + ". Avvio bloccato.",
+                        ex);
+            }
             log.error("Impossibile creare gli indici MongoDB. Verificare la connessione al database.", ex);
         }
     }
@@ -138,20 +156,41 @@ public class MongoIndexInitializer implements ApplicationRunner {
                 new IndexOptions().name("tx_diary_entries_search"));
     }
 
+    private void createClusterFileIndexes() {
+        IndexOperations files = mongoTemplate.indexOps("clusterFiles");
+        files.ensureIndex(new Index().on("sha256", Sort.Direction.ASC)
+                .unique().named("ux_cluster_files_sha256"));
+        files.ensureIndex(new Index().on("kind", Sort.Direction.ASC)
+                .named("ix_cluster_files_kind"));
+        files.ensureIndex(new Index().on("createdAt", Sort.Direction.DESC)
+                .named("ix_cluster_files_created_at"));
+        files.ensureIndex(new Index().on("sourceCodes", Sort.Direction.ASC)
+                .named("ix_cluster_files_source_codes"));
+    }
+
     private void createSupportIndexes() {
         IndexOperations issues = mongoTemplate.indexOps("importIssues");
         issues.ensureIndex(new Index().on("lastSeenAt", Sort.Direction.DESC)
                 .named("ix_import_issues_last_seen_at"));
+    }
 
-        IndexOperations subscriptions = mongoTemplate.indexOps("pushSubscriptions");
+    private void createLocalIndexes() {
+        IndexOperations subscriptions = localMongoTemplate.indexOps("pushSubscriptions");
+        subscriptions.ensureIndex(new Index().on("endpoint", Sort.Direction.ASC)
+                .unique().named("ux_push_subscriptions_endpoint"));
         subscriptions.ensureIndex(new Index().on("active", Sort.Direction.ASC)
                 .named("ix_push_subscriptions_active"));
 
-        IndexOperations deliveries = mongoTemplate.indexOps("notificationDeliveries");
+        IndexOperations deliveries = localMongoTemplate.indexOps("notificationDeliveries");
         deliveries.ensureIndex(new Index()
                 .on("type", Sort.Direction.ASC)
                 .on("createdAt", Sort.Direction.DESC)
                 .named("ix_notification_deliveries_type_created"));
+
+        IndexOperations oauthStates = localMongoTemplate.indexOps("googleOauthStates");
+        oauthStates.ensureIndex(new Index().on("expiresAt", Sort.Direction.ASC)
+                .expire(0)
+                .named("ttl_google_oauth_states"));
     }
 
     private void createGoogleIndexes() {
@@ -202,11 +241,6 @@ public class MongoIndexInitializer implements ApplicationRunner {
                 .named("ix_classroom_materials_item"));
         classroomMaterials.ensureIndex(new Index().on("status", Sort.Direction.ASC)
                 .named("ix_classroom_materials_status"));
-
-        IndexOperations oauthStates = mongoTemplate.indexOps("googleOauthStates");
-        oauthStates.ensureIndex(new Index().on("expiresAt", Sort.Direction.ASC)
-                .expire(0)
-                .named("ttl_google_oauth_states"));
     }
 
     private void dropLegacyIndexes(String collection, List<String> names) {        Set<String> existing = new HashSet<>();

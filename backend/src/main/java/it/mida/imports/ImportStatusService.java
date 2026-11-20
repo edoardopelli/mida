@@ -1,5 +1,7 @@
 package it.mida.imports;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.diary.DiaryEntry;
 import it.mida.diary.DiaryEntryRepository;
 import it.mida.diary.DiaryImport;
@@ -17,6 +19,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ImportStatusService {
 
     private final MonitorState monitorState;

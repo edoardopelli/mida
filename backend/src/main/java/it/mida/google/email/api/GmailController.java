@@ -1,5 +1,7 @@
 package it.mida.google.email.api;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.google.GoogleConnectionService;
 import it.mida.google.GoogleSettings;
 import it.mida.google.email.GmailSyncService;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/google/gmail")
 @Tag(name = "Posta Gmail", description = "Sincronizzazione Gmail tramite API OAuth")
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GmailController {
 
     private final GmailSyncService syncService;

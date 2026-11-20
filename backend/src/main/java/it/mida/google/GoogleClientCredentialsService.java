@@ -1,5 +1,7 @@
 package it.mida.google;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.CredentialCipherService;
 import it.mida.google.api.GoogleClientStatusDto;
 import java.time.Instant;
@@ -18,6 +20,7 @@ import tools.jackson.databind.ObjectMapper;
  * generata dall'applicazione e salvata accanto al JSON.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GoogleClientCredentialsService {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleClientCredentialsService.class);

@@ -5,7 +5,7 @@ spring:
     uri: ${MONGODB_URI:mongodb://localhost:27017/mida}
   data:
     mongodb:
-      auto-index-creation: true
+      auto-index-creation: ${MIDA_AUTO_INDEX_CREATION:true}
   jackson:
     time-zone: UTC
 
@@ -14,6 +14,10 @@ server:
   shutdown: graceful
   compression:
     enabled: true
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    certificate: ${SERVER_SSL_CERT_FILE:}
+    certificate-private-key: ${SERVER_SSL_KEY_FILE:}
 
 management:
   endpoints:
@@ -35,6 +39,52 @@ springdoc:
 mida:
   school-year-start: ${SCHOOL_YEAR_START:2026}
   time-zone: Europe/Rome
+  cluster:
+    role: ${MIDA_ROLE:standalone}
+    cluster-id: ${MIDA_CLUSTER_ID:}
+    node-id: ${MIDA_NODE_ID:}
+    master-url: ${MIDA_MASTER_URL:}
+    master-ca-file: ${MIDA_MASTER_CA_FILE:}
+    node-key-file: ${MIDA_NODE_KEY_FILE:}
+    credential-file: ${MIDA_NODE_CREDENTIAL_FILE:}
+    enrollment-token: ${MIDA_ENROLLMENT_TOKEN:}
+    bootstrap-token: ${MIDA_CLUSTER_BOOTSTRAP_TOKEN:}
+    domain-database: ${MIDA_DOMAIN_DATABASE:mida_blue}
+    local-database: ${MIDA_LOCAL_DATABASE:mida_local}
+    ops-database: ${MIDA_OPS_DATABASE:mida_ops}
+    legacy-database: ${MIDA_LEGACY_DATABASE:mida}
+    active-generation: ${MIDA_ACTIVE_GENERATION:mida_blue:g1}
+    ack-mode: ${MIDA_CLUSTER_ACK_MODE:ALL_ACTIVE}
+    master-local-import: ${MIDA_MASTER_LOCAL_IMPORT:false}
+    rate-limit-per-minute: ${MIDA_RATE_LIMIT_PER_NODE_PER_MINUTE:120}
+    runtime-lease-ttl: ${MIDA_RUNTIME_LEASE_TTL:30s}
+    runtime-lease-renew-interval: ${MIDA_RUNTIME_LEASE_RENEW_INTERVAL:10s}
+    shutdown-drain-timeout: ${MIDA_SHUTDOWN_DRAIN_TIMEOUT:5s}
+    maintenance-drain-timeout: ${MIDA_MAINTENANCE_DRAIN_TIMEOUT:60s}
+    maintenance-lease-ttl: ${MIDA_MAINTENANCE_LEASE_TTL:1h}
+    enrollment-token-ttl: ${MIDA_ENROLLMENT_TOKEN_TTL:15m}
+    credential-rotation-overlap: ${MIDA_CREDENTIAL_ROTATION_OVERLAP:5m}
+    max-upload-bytes: ${MIDA_UPLOAD_MAX_BYTES:10485760}
+    max-upload-items: ${MIDA_UPLOAD_MAX_ITEMS:5000}
+    file-orphan-grace: ${MIDA_FILE_ORPHAN_GRACE:1h}
+    upload-processing-lease: ${MIDA_UPLOAD_PROCESSING_LEASE:2m}
+    upload-recovery-after: ${MIDA_UPLOAD_RECOVERY_AFTER:30s}
+    upload-recovery-interval: ${MIDA_UPLOAD_RECOVERY_INTERVAL:30s}
+    upload-recovery-interval-ms: ${MIDA_UPLOAD_RECOVERY_INTERVAL_MS:30000}
+    upload-recovery-initial-delay-ms: ${MIDA_UPLOAD_RECOVERY_INITIAL_DELAY_MS:15000}
+    tls:
+      enabled: ${MIDA_TLS_ENABLED:true}
+      cert-file: ${MIDA_TLS_CERT_FILE:}
+      key-file: ${MIDA_TLS_KEY_FILE:}
+      ca-file: ${MIDA_TLS_CA_FILE:}
+      allow-insecure-http: ${MIDA_TLS_ALLOW_INSECURE_HTTP:false}
+    migration:
+      mode: ${MIDA_MIGRATION_MODE:none}
+      confirm: ${MIDA_MIGRATION_CONFIRM:false}
+      fail-after-step: ${MIDA_MIGRATION_FAIL_AFTER_STEP:}
+      backup-dir: ${MIDA_MIGRATION_BACKUP_DIR:/backup/migration}
+      backup-key-file: ${MIDA_MIGRATION_BACKUP_KEY_FILE:}
+      reactivation: ${MIDA_MIGRATION_REACTIVATE:false}
   imports:
     enabled: ${IMPORT_MONITORING_ENABLED:true}
     directory: ${IMPORTS_DIRECTORY:/imports}
@@ -43,6 +93,19 @@ mida:
     stability-scans: ${IMPORT_STABILITY_SCANS:2}
     max-file-size-bytes: ${IMPORT_MAX_FILE_SIZE_BYTES:10485760}
     delete-after-import: ${IMPORT_DELETE_AFTER_IMPORT:true}
+  origin:
+    enabled: ${MIDA_ORIGIN_ENABLED:false}
+    directory: ${MIDA_ORIGIN_DIRECTORY:}
+    spool-directory: ${MIDA_ORIGIN_SPOOL_DIR:/var/lib/mida-origin/spool}
+    quarantine-directory: ${MIDA_ORIGIN_QUARANTINE_DIR:/var/lib/mida-origin/quarantine}
+    journal-file: ${MIDA_ORIGIN_JOURNAL_FILE:/var/lib/mida-origin/journal.sqlite}
+    stability-scans: ${MIDA_ORIGIN_STABILITY_SCANS:2}
+    poll-interval: ${MIDA_ORIGIN_POLL_INTERVAL:5s}
+    request-timeout: ${MIDA_ORIGIN_REQUEST_TIMEOUT:30s}
+    retry-base: ${MIDA_ORIGIN_RETRY_BASE:2s}
+    retry-max: ${MIDA_ORIGIN_RETRY_MAX:5m}
+    status-poll-interval: ${MIDA_ORIGIN_STATUS_POLL_INTERVAL:10s}
+    auto-delete: ${MIDA_ORIGIN_AUTO_DELETE:false}
   notifications:
     enabled: ${NOTIFICATIONS_ENABLED:true}
     vapid-public-key: ${VAPID_PUBLIC_KEY:}

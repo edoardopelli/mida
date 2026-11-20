@@ -2,6 +2,8 @@ package it.mida.google.email;
 
 import tools.jackson.databind.JsonNode;
 import it.mida.attachments.AttachmentStorageService;
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.config.MidaProperties;
 import it.mida.events.MidaEventPublisher;
 import it.mida.events.MidaEvents;
@@ -31,6 +33,7 @@ import org.springframework.util.StringUtils;
  * TXT DidUP. Quando arrivano nuove email avvia anche Classroom.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GmailSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(GmailSyncService.class);

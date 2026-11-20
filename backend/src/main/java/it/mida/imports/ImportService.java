@@ -1,5 +1,7 @@
 package it.mida.imports;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.ImportReference;
 import it.mida.config.MidaProperties;
 import it.mida.diary.DiaryEntry;
@@ -55,6 +57,7 @@ import org.springframework.stereotype.Service;
  * tutte le scritture sono state confermate.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ImportService {
 
     private static final Logger log = LoggerFactory.getLogger(ImportService.class);
@@ -77,6 +80,7 @@ public class ImportService {
     private final ImportIssueService issueService;
     private final NotificationService notificationService;
     private final MidaEventPublisher events;
+    private final ImportSourceDeletionPolicy deletionPolicy;
 
     public ImportService(
             MidaProperties properties,
@@ -90,8 +94,10 @@ public class ImportService {
             DiaryEntryWriter diaryEntryWriter,
             ImportIssueService issueService,
             NotificationService notificationService,
-            MidaEventPublisher events) {
+            MidaEventPublisher events,
+            ImportSourceDeletionPolicy deletionPolicy) {
         this.properties = properties;
+        this.deletionPolicy = deletionPolicy;
         this.detector = detector;
         this.homeworkParser = homeworkParser;
         this.diaryParser = diaryParser;
@@ -378,10 +384,7 @@ public class ImportService {
                     "Contenuto duplicato senza documento esistente");
         }
 
-        boolean deleted = false;
-        if (file != null && properties.getImports().isDeleteAfterImport()) {
-            deleted = safelyDelete(file, fileName, sha256);
-        }
+        boolean deleted = deleteSourceIfAuthorized(file, fileName, sha256);
         return new ImportOutcome(
                 ImportOutcome.Status.ALREADY_IMPORTED,
                 fileName.sourceCode(),
@@ -417,10 +420,7 @@ public class ImportService {
             String baseMessage,
             Consumer<Boolean> publication,
             String notificationImportId) {
-        boolean deleted = false;
-        if (file != null && properties.getImports().isDeleteAfterImport()) {
-            deleted = safelyDelete(file, fileName, sha256);
-        }
+        boolean deleted = deleteSourceIfAuthorized(file, fileName, sha256);
 
         try {
             issueService.resolveFileIssues(fileName.originalFilename());
@@ -497,10 +497,7 @@ public class ImportService {
                     "Conflitto: codice già importato con SHA-256 differente");
         }
 
-        boolean deleted = false;
-        if (file != null && properties.getImports().isDeleteAfterImport()) {
-            deleted = safelyDelete(file, fileName, sha256);
-        }
+        boolean deleted = deleteSourceIfAuthorized(file, fileName, sha256);
         return new ImportOutcome(
                 ImportOutcome.Status.ALREADY_IMPORTED,
                 sourceCode,
@@ -509,8 +506,25 @@ public class ImportService {
                 deleted ? "File già importato; copia rimossa" : "File già importato; nessuna nuova importazione");
     }
 
+    /**
+     * The only path through which a legacy import may delete a source file.
+     * The policy is checked here and again in {@link #safelyDelete} as
+     * defence in depth, so a future call site cannot bypass it.
+     */
+    private boolean deleteSourceIfAuthorized(Path file, DidupFileName fileName, String expectedSha256) {
+        if (file == null || !deletionPolicy.canDeleteSource()) {
+            return false;
+        }
+        return safelyDelete(file, fileName, expectedSha256);
+    }
+
     private boolean safelyDelete(Path file, DidupFileName fileName, String expectedSha256) {
         String filename = fileName.originalFilename();
+        if (!deletionPolicy.canDeleteSource()) {
+            log.warn("Cancellazione di {} rifiutata: il ruolo corrente non è autorizzato a eliminare "
+                    + "i sorgenti DidUP", filename);
+            return false;
+        }
         if (!isDirectChildOfConfiguredDirectory(file)) {
             issueService.recordOnce(ImportIssue.Type.FILE_DELETION_FAILED, filename, fileName.sourceCode(),
                     expectedSha256, "Rifiutata la cancellazione di un file esterno alla directory configurata");

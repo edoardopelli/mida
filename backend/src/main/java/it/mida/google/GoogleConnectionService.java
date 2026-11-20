@@ -1,5 +1,7 @@
 package it.mida.google;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import tools.jackson.databind.JsonNode;
 import it.mida.common.CredentialCipherService;
 import it.mida.config.MidaProperties;
@@ -17,6 +19,7 @@ import org.springframework.util.StringUtils;
  * refresh dell'access token, riconnessione e disconnessione.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GoogleConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleConnectionService.class);

@@ -1,6 +1,8 @@
 package it.mida.google.classroom;
 
 import tools.jackson.databind.JsonNode;
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.config.MidaProperties;
 import it.mida.google.GoogleApiClient;
 import it.mida.google.GoogleApiException;
@@ -27,6 +29,7 @@ import org.springframework.web.util.UriComponentsBuilder;
  * I file Drive vengono copiati in GridFS; i link esterni restano riferimenti.
  */
 @Service
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ClassroomSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(ClassroomSyncService.class);

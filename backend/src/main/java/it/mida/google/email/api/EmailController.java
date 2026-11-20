@@ -1,5 +1,7 @@
 package it.mida.google.email.api;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.PageResponse;
 import it.mida.google.email.EmailQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/mail/emails")
 @Tag(name = "Email", description = "Email sincronizzate via Gmail API")
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class EmailController {
 
     private final EmailQueryService queryService;

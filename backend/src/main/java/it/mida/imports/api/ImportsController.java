@@ -1,5 +1,7 @@
 package it.mida.imports.api;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.common.PageResponse;
 import it.mida.diary.DiaryImport;
 import it.mida.diary.DiaryImportRepository;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/imports")
 @Tag(name = "Importazioni", description = "Storico, anomalie e stato del monitoraggio")
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class ImportsController {
 
     private final HomeworkImportRepository importRepository;

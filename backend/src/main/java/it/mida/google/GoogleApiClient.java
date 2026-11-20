@@ -1,5 +1,7 @@
 package it.mida.google;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import it.mida.config.MidaProperties;
 import java.net.URI;
 import java.time.Duration;
@@ -28,6 +30,7 @@ import tools.jackson.databind.ObjectMapper;
  * scaricati direttamente.
  */
 @Component
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class GoogleApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleApiClient.class);

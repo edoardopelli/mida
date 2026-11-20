@@ -1,10 +1,13 @@
 package it.mida.imports;
 
+import it.mida.cluster.ConditionalOnMidaRole;
+import it.mida.cluster.MidaRole;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 
 @Component
+@ConditionalOnMidaRole({MidaRole.STANDALONE, MidaRole.MASTER})
 public class MonitorState {
 
     public enum State {
